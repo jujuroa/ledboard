@@ -7,7 +7,7 @@ js/glow-sprite.js 의 profile() 식을 그대로 옮겼다. 외부 의존성 없
 import math
 import os
 
-# glow-sprite.js 기본값(index.html 초기값과 동일)
+# 그림용 파라미터. 처음 index.html 초기값이며, 지금 초기값과는 다를 수 있음
 SPREAD, CORE, HALO, HALO_W = 3.0, 0.62, 0.55, 0.40
 
 

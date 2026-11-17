@@ -89,7 +89,7 @@
         <span class="lbl">맞춤</span>
         <select id="fit">
           <option value="contain">전체 보기 (contain)</option>
-          <option value="cover">채우기 (cover)</option>
+          <option value="cover" selected>채우기 (cover)</option>
           <option value="stretch">늘리기 (stretch)</option>
         </select>
       </div>
@@ -111,17 +111,17 @@
         </select>
       </div>
       <div class="row">
-        <input id="cols" type="number" min="1" max="1024" value="96"> ×
-        <input id="rows" type="number" min="1" max="1024" value="48">
+        <input id="cols" type="number" min="1" max="1024" value="64"> ×
+        <input id="rows" type="number" min="1" max="1024" value="42">
       </div>
       <label class="check"><input id="autoPitch" type="checkbox" checked> 화면에 맞춰 피치 자동</label>
       <label class="slider">피치(px) <output></output>
-        <input id="pitch" type="range" min="2" max="48" step="0.5" value="10">
+        <input id="pitch" type="range" min="2" max="48" step="0.5" value="16">
       </label>
       <div class="row">
         <span class="lbl">소자 모양</span>
         <select id="shape">
-          <option value="round">원형</option>
+          <option value="round" selected>원형</option>
           <option value="square">사각형</option>
         </select>
       </div>
@@ -135,13 +135,13 @@
         <button data-c="#3aff4a" style="--c:#3aff4a" title="Green"></button>
         <button data-c="#2a7bff" style="--c:#2a7bff" title="Blue"></button>
         <button data-c="#f4f6ff" style="--c:#f4f6ff" title="White"></button>
-        <input id="color" type="color" value="#ffa21a">
+        <input id="color" type="color" value="#fed98b">
       </div>
       <label class="slider">세기 <output></output>
-        <input id="intensity" type="range" min="0" max="3" step="0.01" value="1">
+        <input id="intensity" type="range" min="0" max="3" step="0.01" value="2.8">
       </label>
       <label class="slider">꺼진 소자 보이기 <output></output>
-        <input id="offLevel" type="range" min="0" max="0.3" step="0.005" value="0.06">
+        <input id="offLevel" type="range" min="0" max="0.3" step="0.005" value="0.1">
       </label>
     </section>
 
@@ -149,32 +149,32 @@
       <h2>글로우 (단일 이미지)</h2>
       <canvas id="sprite-preview" width="128" height="128"></canvas>
       <label class="slider">다이 지름 <output></output>
-        <input id="core" type="range" min="0.1" max="1" step="0.01" value="0.62">
+        <input id="core" type="range" min="0.1" max="1" step="0.01" value="0.72">
       </label>
       <label class="slider">헤일로 세기 <output></output>
-        <input id="halo" type="range" min="0" max="1.5" step="0.01" value="0.55">
+        <input id="halo" type="range" min="0" max="1.5" step="0.01" value="0.08">
       </label>
       <label class="slider">헤일로 폭 <output></output>
-        <input id="haloWidth" type="range" min="0.05" max="2" step="0.01" value="0.4">
+        <input id="haloWidth" type="range" min="0.05" max="2" step="0.01" value="1.1">
       </label>
       <label class="slider">스프라이트 반경 <output></output>
-        <input id="spread" type="range" min="0.6" max="8" step="0.1" value="3">
+        <input id="spread" type="range" min="0.6" max="8" step="0.1" value="2.8">
       </label>
       <label class="slider" title="0 = 순수 투명도 제어. 값을 올리면 코어는 포화되고 꼬리가 들려 확장이 강조됨 (WebGL 전용)">노출 압축 <output></output>
-        <input id="exposure" type="range" min="0" max="12" step="0.1" value="0">
+        <input id="exposure" type="range" min="0" max="12" step="0.1" value="5.5">
       </label>
     </section>
 
     <section>
       <h2>톤</h2>
       <label class="slider">밝기 <output></output>
-        <input id="brightness" type="range" min="-1" max="1" step="0.01" value="0">
+        <input id="brightness" type="range" min="-1" max="1" step="0.01" value="0.01">
       </label>
       <label class="slider">대비 <output></output>
-        <input id="contrast" type="range" min="0" max="4" step="0.01" value="1">
+        <input id="contrast" type="range" min="0" max="4" step="0.01" value="1.12">
       </label>
       <label class="slider">감마 <output></output>
-        <input id="gamma" type="range" min="0.2" max="4" step="0.01" value="1">
+        <input id="gamma" type="range" min="0.2" max="4" step="0.01" value="1.02">
       </label>
       <div class="row">
         <span class="lbl">계조</span>
@@ -199,28 +199,28 @@
       <canvas id="ease-preview" width="268" height="76" title="0 → 1 계단 입력에 대한 밝기 응답 (가로 1초)"></canvas>
       <div id="ease-info" class="hint"></div>
       <label class="slider" title="고유 진동수. 클수록 빠르게 따라감">반응 속도(Hz) <output></output>
-        <input id="easeFreq" type="range" min="0.5" max="20" step="0.1" value="4">
+        <input id="easeFreq" type="range" min="0.5" max="20" step="0.1" value="3.7">
       </label>
       <label class="slider" title="1 미만: 목표를 지나쳤다 돌아옴, 1: 임계 감쇠, 1 초과: 느리게 다가감">감쇠비 ζ <output></output>
-        <input id="easeZeta" type="range" min="0.05" max="2" step="0.01" value="0.6">
+        <input id="easeZeta" type="range" min="0.05" max="2" step="0.01" value="0.29">
       </label>
     </section>
 
     <section>
       <h2>정지 소자 감광</h2>
-      <label class="check" title="밝기가 일정 수준 이상 변하지 않는 소자를 서서히 어둡게"><input id="idleOn" type="checkbox"> 감광 사용</label>
+      <label class="check" title="밝기가 일정 수준 이상 변하지 않는 소자를 서서히 어둡게"><input id="idleOn" type="checkbox" checked> 감광 사용</label>
       <div id="idle-info" class="hint"></div>
       <label class="slider" title="밝기가 이 값보다 크게 바뀌어야 '변화'로 봄 (0~1). 영상 노이즈를 거르려면 0.05 이상">변화 기준 <output></output>
-        <input id="idleThr" type="range" min="0.01" max="0.5" step="0.01" value="0.06">
+        <input id="idleThr" type="range" min="0.01" max="0.5" step="0.01" value="0.04">
       </label>
       <label class="slider" title="변화가 멈춘 뒤 어두워지기 시작할 때까지 기다리는 시간">유지 시간(초) <output></output>
-        <input id="idleHold" type="range" min="0" max="60" step="0.5" value="3">
+        <input id="idleHold" type="range" min="0" max="60" step="0.5" value="0">
       </label>
       <label class="slider" title="지수 감쇠 시상수 τ. 이 시간마다 남은 차이가 약 37%로 줄어듦">어두워지는 시간 τ(초) <output></output>
-        <input id="idleTau" type="range" min="0.2" max="60" step="0.1" value="4">
+        <input id="idleTau" type="range" min="0.2" max="60" step="0.1" value="2.9">
       </label>
       <label class="slider" title="감광의 하한. 원래 밝기 대비 비율">최저 밝기 <output></output>
-        <input id="idleFloor" type="range" min="0" max="1" step="0.01" value="0.15">
+        <input id="idleFloor" type="range" min="0" max="1" step="0.01" value="0.17">
       </label>
     </section>
 
@@ -230,7 +230,7 @@
         <span class="lbl">렌더러</span>
         <select id="renderer">
           <option value="gl">WebGL2 (인스턴싱)</option>
-          <option value="2d">Canvas2D (소자별 drawImage)</option>
+          <option value="2d" selected>Canvas2D (소자별 drawImage)</option>
         </select>
       </div>
       <!-- 데스크톱 앱에서는 메뉴 막대로 옮겨 가므로 숨김 (body.in-app) -->
