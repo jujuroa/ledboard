@@ -11,7 +11,7 @@
   <main id="stage">
     <canvas id="cv-gl"></canvas>
     <canvas id="cv-2d" hidden></canvas>
-    <div id="drop-hint">이미지 / 영상 파일을 여기에 놓기</div>
+    <div id="drop-hint" data-i18n="stage.drop">이미지 / 영상 파일을 여기에 놓기</div>
     <div id="stage-badge" hidden></div>
     <div id="toast" hidden></div>
     <div id="stats"></div>
@@ -20,27 +20,27 @@
   <aside id="panel">
     <header>
       <h1>LED Board</h1>
-      <button id="btn-panel" title="패널 접기">⟨</button>
+      <button id="btn-panel" title="패널 접기" data-i18n-title="panel.collapse">⟨</button>
     </header>
 
     <section>
-      <h2>소스</h2>
+      <h2 data-i18n="src.title">소스</h2>
       <div class="row">
         <select id="src-kind">
-          <optgroup label="내장">
-            <option value="pattern:gradient">패턴 · 밝기 계단 + 파형</option>
-            <option value="pattern:plasma">패턴 · 플라즈마</option>
-            <option value="pattern:clock">패턴 · 시계</option>
-            <option value="text">텍스트 스크롤</option>
+          <optgroup label="내장" data-i18n-label="src.group.builtin">
+            <option value="pattern:gradient" data-i18n="src.gradient">패턴 · 밝기 계단 + 파형</option>
+            <option value="pattern:plasma" data-i18n="src.plasma">패턴 · 플라즈마</option>
+            <option value="pattern:clock" data-i18n="src.clock">패턴 · 시계</option>
+            <option value="text" data-i18n="src.text">텍스트 스크롤</option>
           </optgroup>
-          <optgroup label="로컬">
-            <option value="file">파일 (이미지 / 영상)</option>
-            <option value="camera">카메라</option>
-            <option value="screen" disabled>화면 캡처 (예정)</option>
+          <optgroup label="로컬" data-i18n-label="src.group.local">
+            <option value="file" data-i18n="src.file">파일 (이미지 / 영상)</option>
+            <option value="camera" data-i18n="src.camera">카메라</option>
+            <option value="screen" disabled data-i18n="src.screen">화면 캡처 (예정)</option>
           </optgroup>
-          <optgroup label="외부 스트림">
+          <optgroup label="외부 스트림" data-i18n-label="src.group.stream">
             <option value="ws">WebSocket</option>
-            <option value="whep" disabled>WebRTC · WHEP (예정)</option>
+            <option value="whep" disabled data-i18n="src.whep">WebRTC · WHEP (예정)</option>
           </optgroup>
         </select>
       </div>
@@ -50,56 +50,56 @@
           <input id="ws-url" type="text" placeholder="ws://127.0.0.1:8765/" spellcheck="false">
         </div>
         <div class="row">
-          <span class="lbl">토큰</span>
-          <input id="ws-token" type="password" placeholder="(선택)" autocomplete="off">
-          <button id="ws-token-show" title="토큰 표시">표시</button>
+          <span class="lbl" data-i18n="ws.token">토큰</span>
+          <input id="ws-token" type="password" placeholder="(선택)" data-i18n-placeholder="ws.tokenPlaceholder" autocomplete="off">
+          <button id="ws-token-show" title="토큰 표시" data-i18n-title="ws.tokenShowTitle">표시</button>
         </div>
         <div class="row">
-          <button id="ws-connect">연결</button>
-          <button id="ws-disconnect">끊기</button>
+          <button id="ws-connect" data-i18n="ws.connect">연결</button>
+          <button id="ws-disconnect" data-i18n="ws.disconnect">끊기</button>
         </div>
-        <div class="kv"><span class="lbl">상태</span><span id="ws-status"><i class="dot"></i>연결 안 됨</span></div>
-        <div class="kv"><span class="lbl">수신</span><span id="ws-rx">—</span></div>
-        <label class="check"><input id="remoteConfig" type="checkbox" checked> 원격 설정 허용</label>
+        <div class="kv"><span class="lbl" data-i18n="ws.status">상태</span><span id="ws-status"><i class="dot"></i>연결 안 됨</span></div>
+        <div class="kv"><span class="lbl" data-i18n="ws.rx">수신</span><span id="ws-rx">—</span></div>
+        <label class="check" data-i18n="ws.remoteConfig"><input id="remoteConfig" type="checkbox" checked> 원격 설정 허용</label>
         <div class="row">
-          <span class="lbl">LED 톤</span>
-          <select id="ws-ledtone" title="LED 직접 입력 값의 톤 처리">
-            <option value="apply">apply (톤 처리 적용)</option>
-            <option value="bypass">bypass (값 그대로)</option>
+          <span class="lbl" data-i18n="ws.ledTone">LED 톤</span>
+          <select id="ws-ledtone" title="LED 직접 입력 값의 톤 처리" data-i18n-title="ws.ledToneTitle">
+            <option value="apply" data-i18n="ws.apply">apply (톤 처리 적용)</option>
+            <option value="bypass" data-i18n="ws.bypass">bypass (값 그대로)</option>
           </select>
         </div>
         <div id="ws-error" class="err"></div>
       </div>
       <div class="row" data-for="camera">
-        <span class="lbl">장치</span>
-        <select id="cam-device" title="카메라 입력 장치"></select>
+        <span class="lbl" data-i18n="cam.device">장치</span>
+        <select id="cam-device" title="카메라 입력 장치" data-i18n-title="cam.deviceTitle"></select>
       </div>
       <div class="row" data-for="text">
         <input id="text" type="text" value="HELLO LED BOARD  ★  안녕하세요  ">
       </div>
-      <label class="slider" data-for="text">스크롤 속도 <output></output>
+      <label class="slider" data-for="text" data-i18n="text.speed">스크롤 속도 <output></output>
         <input id="textSpeed" type="range" min="0" max="120" step="1" value="20">
       </label>
       <div class="row" data-for="file">
-        <button id="btn-open">파일 열기…</button>
-        <button id="btn-play">재생 / 정지</button>
+        <button id="btn-open" data-i18n="file.open">파일 열기…</button>
+        <button id="btn-play" data-i18n="file.play">재생 / 정지</button>
         <input id="file" type="file" accept="image/*,video/*" hidden>
       </div>
       <div class="row">
-        <span class="lbl">맞춤</span>
+        <span class="lbl" data-i18n="fit.label">맞춤</span>
         <select id="fit">
-          <option value="contain">전체 보기 (contain)</option>
-          <option value="cover" selected>채우기 (cover)</option>
-          <option value="stretch">늘리기 (stretch)</option>
+          <option value="contain" data-i18n="fit.contain">전체 보기 (contain)</option>
+          <option value="cover" selected data-i18n="fit.cover">채우기 (cover)</option>
+          <option value="stretch" data-i18n="fit.stretch">늘리기 (stretch)</option>
         </select>
       </div>
     </section>
 
     <section>
-      <h2>해상도</h2>
+      <h2 data-i18n="res.title">해상도</h2>
       <div class="row">
         <select id="preset">
-          <option value="">프리셋…</option>
+          <option value="" data-i18n="res.preset">프리셋…</option>
           <option value="32x16">32 × 16</option>
           <option value="64x32">64 × 32</option>
           <option value="96x48">96 × 48</option>
@@ -114,21 +114,21 @@
         <input id="cols" type="number" min="1" max="1024" value="64"> ×
         <input id="rows" type="number" min="1" max="1024" value="42">
       </div>
-      <label class="check"><input id="autoPitch" type="checkbox" checked> 화면에 맞춰 피치 자동</label>
-      <label class="slider">피치(px) <output></output>
+      <label class="check" data-i18n="res.autoPitch"><input id="autoPitch" type="checkbox" checked> 화면에 맞춰 피치 자동</label>
+      <label class="slider" data-i18n="res.pitch">피치(px) <output></output>
         <input id="pitch" type="range" min="2" max="48" step="0.5" value="16">
       </label>
       <div class="row">
-        <span class="lbl">소자 모양</span>
+        <span class="lbl" data-i18n="res.shape">소자 모양</span>
         <select id="shape">
-          <option value="round" selected>원형</option>
-          <option value="square">사각형</option>
+          <option value="round" selected data-i18n="res.round">원형</option>
+          <option value="square" data-i18n="res.square">사각형</option>
         </select>
       </div>
     </section>
 
     <section>
-      <h2>LED 색</h2>
+      <h2 data-i18n="color.title">LED 색</h2>
       <div class="swatches" id="swatches">
         <button data-c="#ff2a1a" style="--c:#ff2a1a" title="Red"></button>
         <button data-c="#ffa21a" style="--c:#ffa21a" title="Amber"></button>
@@ -137,47 +137,47 @@
         <button data-c="#f4f6ff" style="--c:#f4f6ff" title="White"></button>
         <input id="color" type="color" value="#fed98b">
       </div>
-      <label class="slider">세기 <output></output>
+      <label class="slider" data-i18n="color.intensity">세기 <output></output>
         <input id="intensity" type="range" min="0" max="3" step="0.01" value="2.8">
       </label>
-      <label class="slider">꺼진 소자 보이기 <output></output>
+      <label class="slider" data-i18n="color.offLevel">꺼진 소자 보이기 <output></output>
         <input id="offLevel" type="range" min="0" max="0.3" step="0.005" value="0.1">
       </label>
     </section>
 
     <section>
-      <h2>글로우 (단일 이미지)</h2>
+      <h2 data-i18n="glow.title">글로우 (단일 이미지)</h2>
       <canvas id="sprite-preview" width="128" height="128"></canvas>
-      <label class="slider">다이 지름 <output></output>
+      <label class="slider" data-i18n="glow.core">다이 지름 <output></output>
         <input id="core" type="range" min="0.1" max="1" step="0.01" value="0.72">
       </label>
-      <label class="slider">헤일로 세기 <output></output>
+      <label class="slider" data-i18n="glow.halo">헤일로 세기 <output></output>
         <input id="halo" type="range" min="0" max="1.5" step="0.01" value="0.08">
       </label>
-      <label class="slider">헤일로 폭 <output></output>
+      <label class="slider" data-i18n="glow.haloWidth">헤일로 폭 <output></output>
         <input id="haloWidth" type="range" min="0.05" max="2" step="0.01" value="1.1">
       </label>
-      <label class="slider">스프라이트 반경 <output></output>
+      <label class="slider" data-i18n="glow.spread">스프라이트 반경 <output></output>
         <input id="spread" type="range" min="0.6" max="8" step="0.1" value="2.8">
       </label>
-      <label class="slider" title="0 = 순수 투명도 제어. 값을 올리면 코어는 포화되고 꼬리가 들려 확장이 강조됨 (WebGL 전용)">노출 압축 <output></output>
+      <label class="slider" title="0 = 순수 투명도 제어. 값을 올리면 코어는 포화되고 꼬리가 들려 확장이 강조됨 (WebGL 전용)" data-i18n="glow.exposure" data-i18n-title="glow.exposureTitle">노출 압축 <output></output>
         <input id="exposure" type="range" min="0" max="12" step="0.1" value="5.5">
       </label>
     </section>
 
     <section>
-      <h2>톤</h2>
-      <label class="slider">밝기 <output></output>
+      <h2 data-i18n="tone.title">톤</h2>
+      <label class="slider" data-i18n="tone.brightness">밝기 <output></output>
         <input id="brightness" type="range" min="-1" max="1" step="0.01" value="0.01">
       </label>
-      <label class="slider">대비 <output></output>
+      <label class="slider" data-i18n="tone.contrast">대비 <output></output>
         <input id="contrast" type="range" min="0" max="4" step="0.01" value="1.12">
       </label>
-      <label class="slider">감마 <output></output>
+      <label class="slider" data-i18n="tone.gamma">감마 <output></output>
         <input id="gamma" type="range" min="0.2" max="4" step="0.01" value="1.02">
       </label>
       <div class="row">
-        <span class="lbl">계조</span>
+        <span class="lbl" data-i18n="tone.levels">계조</span>
         <select id="levels">
           <option value="2">1 bit (On/Off)</option>
           <option value="4">2 bit (4)</option>
@@ -187,66 +187,74 @@
           <option value="256" selected>8 bit (256)</option>
         </select>
       </div>
-      <label class="slider" data-for="bit1">임계값 <output></output>
+      <label class="slider" data-for="bit1" data-i18n="tone.threshold">임계값 <output></output>
         <input id="threshold" type="range" min="0" max="1" step="0.01" value="0.5">
       </label>
-      <label class="check"><input id="invert" type="checkbox"> 반전</label>
+      <label class="check" data-i18n="tone.invert"><input id="invert" type="checkbox"> 반전</label>
     </section>
 
     <section>
-      <h2>밝기 이징 (가속도 모델)</h2>
-      <label class="check" title="소자마다 밝기와 변화 속도를 두고, 목표까지의 거리를 힘으로 적분"><input id="easeOn" type="checkbox" checked> 이징 사용</label>
-      <canvas id="ease-preview" width="268" height="76" title="0 → 1 계단 입력에 대한 밝기 응답 (가로 1초)"></canvas>
+      <h2 data-i18n="ease.title">밝기 이징 (가속도 모델)</h2>
+      <label class="check" title="소자마다 밝기와 변화 속도를 두고, 목표까지의 거리를 힘으로 적분" data-i18n="ease.on" data-i18n-title="ease.onTitle"><input id="easeOn" type="checkbox" checked> 이징 사용</label>
+      <canvas id="ease-preview" width="268" height="76" title="0 → 1 계단 입력에 대한 밝기 응답 (가로 1초)" data-i18n-title="ease.previewTitle"></canvas>
       <div id="ease-info" class="hint"></div>
-      <label class="slider" title="고유 진동수. 클수록 빠르게 따라감">반응 속도(Hz) <output></output>
+      <label class="slider" title="고유 진동수. 클수록 빠르게 따라감" data-i18n="ease.freq" data-i18n-title="ease.freqTitle">반응 속도(Hz) <output></output>
         <input id="easeFreq" type="range" min="0.5" max="20" step="0.1" value="3.7">
       </label>
-      <label class="slider" title="1 미만: 목표를 지나쳤다 돌아옴, 1: 임계 감쇠, 1 초과: 느리게 다가감">감쇠비 ζ <output></output>
-        <input id="easeZeta" type="range" min="0.05" max="2" step="0.01" value="0.29">
+      <label class="slider" title="1 미만: 목표를 지나쳤다 돌아옴, 1: 임계 감쇠, 1 초과: 느리게 다가감" data-i18n="ease.zeta" data-i18n-title="ease.zetaTitle">감쇠비 ζ <output></output>
+        <input id="easeZeta" type="range" min="0.05" max="2" step="0.01" value="0.65">
       </label>
     </section>
 
     <section>
-      <h2>정지 소자 감광</h2>
-      <label class="check" title="밝기가 일정 수준 이상 변하지 않는 소자를 서서히 어둡게"><input id="idleOn" type="checkbox" checked> 감광 사용</label>
+      <h2 data-i18n="idle.title">정지 소자 감광</h2>
+      <label class="check" title="밝기가 일정 수준 이상 변하지 않는 소자를 서서히 어둡게" data-i18n="idle.on" data-i18n-title="idle.onTitle"><input id="idleOn" type="checkbox" checked> 감광 사용</label>
       <div id="idle-info" class="hint"></div>
-      <label class="slider" title="밝기가 이 값보다 크게 바뀌어야 '변화'로 봄 (0~1). 영상 노이즈를 거르려면 0.05 이상">변화 기준 <output></output>
+      <label class="slider" title="밝기가 이 값보다 크게 바뀌어야 '변화'로 봄 (0~1). 영상 노이즈를 거르려면 0.05 이상" data-i18n="idle.thr" data-i18n-title="idle.thrTitle">변화 기준 <output></output>
         <input id="idleThr" type="range" min="0.01" max="0.5" step="0.01" value="0.04">
       </label>
-      <label class="slider" title="변화가 멈춘 뒤 어두워지기 시작할 때까지 기다리는 시간">유지 시간(초) <output></output>
+      <label class="slider" title="변화가 멈춘 뒤 어두워지기 시작할 때까지 기다리는 시간" data-i18n="idle.hold" data-i18n-title="idle.holdTitle">유지 시간(초) <output></output>
         <input id="idleHold" type="range" min="0" max="60" step="0.5" value="0">
       </label>
-      <label class="slider" title="지수 감쇠 시상수 τ. 이 시간마다 남은 차이가 약 37%로 줄어듦">어두워지는 시간 τ(초) <output></output>
+      <label class="slider" title="지수 감쇠 시상수 τ. 이 시간마다 남은 차이가 약 37%로 줄어듦" data-i18n="idle.tau" data-i18n-title="idle.tauTitle">어두워지는 시간 τ(초) <output></output>
         <input id="idleTau" type="range" min="0.2" max="60" step="0.1" value="2.9">
       </label>
-      <label class="slider" title="감광의 하한. 원래 밝기 대비 비율">최저 밝기 <output></output>
+      <label class="slider" title="감광의 하한. 원래 밝기 대비 비율" data-i18n="idle.floor" data-i18n-title="idle.floorTitle">최저 밝기 <output></output>
         <input id="idleFloor" type="range" min="0" max="1" step="0.01" value="0.17">
       </label>
     </section>
 
     <section>
-      <h2>기타</h2>
+      <h2 data-i18n="misc.title">기타</h2>
       <div class="row">
-        <span class="lbl">렌더러</span>
+        <span class="lbl" data-i18n="misc.renderer">렌더러</span>
         <select id="renderer">
-          <option value="gl">WebGL2 (인스턴싱)</option>
-          <option value="2d" selected>Canvas2D (소자별 drawImage)</option>
+          <option value="gl" data-i18n="misc.gl">WebGL2 (인스턴싱)</option>
+          <option value="2d" selected data-i18n="misc.2d">Canvas2D (소자별 drawImage)</option>
+        </select>
+      </div>
+      <div class="row">
+        <span class="lbl" data-i18n="misc.lang">언어</span>
+        <select id="lang" title="Language">
+          <option value="ko">한국어</option>
+          <option value="en">English</option>
         </select>
       </div>
       <!-- 데스크톱 앱에서는 메뉴 막대로 옮겨 가므로 숨김 (body.in-app) -->
       <div class="row panel-actions">
-        <button id="btn-snap">PNG 저장</button>
-        <button id="btn-reset">설정 초기화</button>
+        <button id="btn-snap" data-i18n="misc.snap">PNG 저장</button>
+        <button id="btn-reset" data-i18n="misc.reset">설정 초기화</button>
       </div>
       <div class="row panel-actions">
-        <button id="btn-export" title="현재 설정을 JSON 파일로 저장">설정 내보내기</button>
-        <button id="btn-import" title="JSON 설정 파일 불러오기">설정 불러오기…</button>
+        <button id="btn-export" title="현재 설정을 JSON 파일로 저장" data-i18n="misc.export" data-i18n-title="misc.exportTitle">설정 내보내기</button>
+        <button id="btn-import" title="JSON 설정 파일 불러오기" data-i18n="misc.import" data-i18n-title="misc.importTitle">설정 불러오기…</button>
         <input id="settings-file" type="file" accept=".json,application/json" hidden>
       </div>
     </section>
   </aside>
 
   <!-- 빌드 없이 file://로도 열리도록 ES module 대신 전역 스크립트. 의존하는 것을 먼저 로드 -->
+  <script src="js/i18n.js"></script>
   <script src="js/frame.js"></script>
   <script src="js/glow-sprite.js"></script>
   <script src="js/tone.js"></script>

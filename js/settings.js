@@ -111,8 +111,8 @@
      * @returns {{applied: number, skipped: string[]}}
      */
     importData(data) {
-      if (!data || typeof data !== 'object') throw new Error('설정 파일 형식이 아님');
-      if (data.app !== undefined && data.app !== 'ledboard') throw new Error('LEDBoard 설정 파일이 아님');
+      if (!data || typeof data !== 'object') throw new Error(I18n.t('err.notSettings'));
+      if (data.app !== undefined && data.app !== 'ledboard') throw new Error(I18n.t('err.otherApp'));
       const src = data.settings && typeof data.settings === 'object' ? data.settings : data;
       let applied = 0;
       const skipped = [];
@@ -131,7 +131,7 @@
         this.overrides.delete(k);
         applied++;
       });
-      if (!applied) throw new Error('적용할 설정 값이 없음');
+      if (!applied) throw new Error(I18n.t('err.noValues'));
       return { applied, skipped };
     }
 

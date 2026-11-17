@@ -6,16 +6,18 @@
  *
  * 메뉴 막대
  *   파일  PNG 저장(Ctrl+S), 설정 내보내기(Ctrl+E), 설정 불러오기(Ctrl+O), 설정 초기화, 종료
- *   보기  설정 패널(H), 상태 표시줄(S), 전체 화면(F11), 새로 고침(Ctrl+R, F5), 개발자 도구(F12)
+ *   보기  설정 패널(H), 상태 표시줄(S), 전체 화면(F11), 언어, 새로 고침(Ctrl+R, F5), 개발자 도구(F12)
  * 메뉴 항목은 페이지의 window.ledboardCommand(이름)을 부른다 (js/main.js).
+ * 메뉴 문구는 페이지 UI 언어를 따른다. 페이지가 preload의 ledboardShell.setLang으로 알려 준다.
+ *   LEDBoard.exe --lang=en   (이번 실행만 영어. 저장하지 않음)
  */
 'use strict';
 
 const path = require('path');
-const { app, BrowserWindow, Menu, session, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, session, shell } = require('electron');
 
 // 페이지가 읽는 쿼리 키 (README의 쿼리 파라미터 표와 같음)
-const QUERY_KEYS = ['ws', 'token', 'cols', 'rows', 'panel', 'stats'];
+const QUERY_KEYS = ['ws', 'token', 'cols', 'rows', 'panel', 'stats', 'lang'];
 
 /** 명령행의 --key=value 중 QUERY_KEYS에 해당하는 것만 쿼리로 옮긴다. */
 function queryFromArgv(argv) {
@@ -36,36 +38,76 @@ function pageCommand(win, name) {
     .catch(() => {});
 }
 
-function buildMenu(win) {
+// 메뉴 문구. 페이지 UI 언어(js/i18n.js)를 따른다.
+const MENU_TEXT = {
+  ko: {
+    file: '파일(&F)', snap: 'PNG 저장', export: '설정 내보내기…', import: '설정 불러오기…',
+    reset: '설정 초기화', quit: '종료',
+    view: '보기(&V)', panel: '설정 패널 접기·펴기', stats: '상태 표시줄 표시·숨김',
+    fullscreen: '전체 화면', reload: '새로 고침', devtools: '개발자 도구', language: '언어(Language)',
+  },
+  en: {
+    file: '&File', snap: 'Save PNG', export: 'Export Settings…', import: 'Import Settings…',
+    reset: 'Reset Settings', quit: 'Exit',
+    view: '&View', panel: 'Toggle Settings Panel', stats: 'Toggle Status Bar',
+    fullscreen: 'Full Screen', reload: 'Reload', devtools: 'Developer Tools', language: 'Language',
+  },
+};
+
+function buildMenu(win, lang) {
+  const T = MENU_TEXT[lang] || MENU_TEXT.en;
   const cmd = (name) => () => pageCommand(win, name);
+  // 페이지가 언어를 바꾼 뒤 ui-lang으로 알려 오면 메뉴가 다시 만들어진다
+  const setLang = (l) => () => pageCommand(win, 'lang:' + l);
   return Menu.buildFromTemplate([
     {
-      label: '파일(&F)',
+      label: T.file,
       submenu: [
-        { label: 'PNG 저장', accelerator: 'CmdOrCtrl+S', click: cmd('snap') },
+        { label: T.snap, accelerator: 'CmdOrCtrl+S', click: cmd('snap') },
         { type: 'separator' },
-        { label: '설정 내보내기…', accelerator: 'CmdOrCtrl+E', click: cmd('export') },
-        { label: '설정 불러오기…', accelerator: 'CmdOrCtrl+O', click: cmd('import') },
-        { label: '설정 초기화', click: cmd('reset') },
+        { label: T.export, accelerator: 'CmdOrCtrl+E', click: cmd('export') },
+        { label: T.import, accelerator: 'CmdOrCtrl+O', click: cmd('import') },
+        { label: T.reset, click: cmd('reset') },
         { type: 'separator' },
-        { label: '종료', role: 'quit' },
+        { label: T.quit, role: 'quit' },
       ],
     },
     {
-      label: '보기(&V)',
+      label: T.view,
       submenu: [
         // H·S는 페이지가 직접 처리한다(입력란 포커스 시 무시). 메뉴에는 표시만 한다.
-        { label: '설정 패널 접기·펴기', accelerator: 'H', registerAccelerator: false, click: cmd('panel') },
-        { label: '상태 표시줄 표시·숨김', accelerator: 'S', registerAccelerator: false, click: cmd('stats') },
+        { label: T.panel, accelerator: 'H', registerAccelerator: false, click: cmd('panel') },
+        { label: T.stats, accelerator: 'S', registerAccelerator: false, click: cmd('stats') },
         { type: 'separator' },
-        { label: '전체 화면', role: 'togglefullscreen' },
+        { label: T.fullscreen, role: 'togglefullscreen' },
         { type: 'separator' },
-        { label: '새로 고침', role: 'reload' },
-        { label: '개발자 도구', accelerator: 'F12', click: () => win.webContents.toggleDevTools() },
+        {
+          label: T.language,
+          submenu: [
+            { label: '한국어', type: 'radio', checked: lang === 'ko', click: setLang('ko') },
+            { label: 'English', type: 'radio', checked: lang === 'en', click: setLang('en') },
+          ],
+        },
+        { type: 'separator' },
+        { label: T.reload, role: 'reload' },
+        { label: T.devtools, accelerator: 'F12', click: () => win.webContents.toggleDevTools() },
       ],
     },
   ]);
 }
+
+/** 메뉴 언어를 바꾼다. 같은 언어면 다시 만들지 않는다 */
+function setMenuLang(win, lang) {
+  if (win.isDestroyed() || !MENU_TEXT[lang] || win.menuLang === lang) return;
+  win.menuLang = lang;
+  win.setMenu(buildMenu(win, lang));
+}
+
+// 페이지가 UI 언어를 정하거나 바꾸면 알려 온다 (electron/preload.js)
+ipcMain.on('ui-lang', (event, lang) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) setMenuLang(win, lang);
+});
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -81,11 +123,13 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      preload: path.join(__dirname, 'preload.js'),
       // 창이 가려지거나 최소화돼도 렌더 루프·WebSocket 수신이 느려지지 않게 한다.
       backgroundThrottling: false,
     },
   });
-  win.setMenu(buildMenu(win));
+  // 페이지가 언어를 알려 오기 전까지는 OS 언어로 메뉴를 만든다
+  setMenuLang(win, /^ko/i.test(app.getLocale()) ? 'ko' : 'en');
   win.once('ready-to-show', () => win.show());
 
   // F5 새로 고침 (메뉴의 Ctrl+R과 같음)

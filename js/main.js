@@ -14,6 +14,7 @@
 
   // ---- 설정 -----------------------------------------------------------------
   const query = new URLSearchParams(location.search);
+  I18n.init(query.get('lang'));
   const settings = new Settings(query);
   const ALL_KEYS = Settings.ALL_KEYS;
 
@@ -62,7 +63,7 @@
       P = settings.read();
       if (resized) {
         needLayout = true;
-        toast(`발신 측이 해상도를 ${P.cols} × ${P.rows}로 변경`);
+        toast(I18n.t('msg.boardResized', { cols: P.cols, rows: P.rows }));
         settings.save();
       }
       channel.boardChanged();   // LED 버퍼 재할당 + state 응답
@@ -224,7 +225,7 @@
     const devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
     const sel = $('cam-device');
     const cur = sel.value;
-    sel.replaceChildren(...devs.map((d, i) => new Option(d.label || `카메라 ${i + 1}`, d.deviceId)));
+    sel.replaceChildren(...devs.map((d, i) => new Option(d.label || I18n.t('cam.fallback', { n: i + 1 }), d.deviceId)));
     if (devs.some((d) => d.deviceId === cur)) sel.value = cur;
     return devs;
   }
@@ -240,12 +241,12 @@
   /** getUserMedia 오류를 원인이 드러나는 문구로 바꾼다. */
   function cameraError(err) {
     const why = {
-      NotReadableError: '다른 프로그램이 카메라를 사용 중이거나 장치를 열 수 없음',
-      NotAllowedError: '카메라 권한이 거부됨 (Windows 설정 → 개인 정보 및 보안 → 카메라 확인)',
-      NotFoundError: '카메라 장치를 찾을 수 없음',
-      OverconstrainedError: '선택한 카메라 장치를 찾을 수 없음',
+      NotReadableError: 'err.camBusy',
+      NotAllowedError: 'err.camDenied',
+      NotFoundError: 'err.camNotFound',
+      OverconstrainedError: 'err.camGone',
     }[err && err.name];
-    return why ? new Error(why) : err;
+    return why ? new Error(I18n.t(why)) : err;
   }
 
   /** @param deviceId 비우면 pickCamera로 고른다 */
@@ -275,7 +276,7 @@
     try {
       await startCamera(e.target.value);
     } catch (err) {
-      alertStat('카메라 오류: ' + err.message);
+      alertStat(I18n.t('msg.cameraError', { msg: err.message }));
     }
     dirty = true;
   });
@@ -293,7 +294,7 @@
       else if (value === 'file' && !source.media) $('file').click();
       // ws: 바로 연결하지 않음. 연결 패널에서 [연결] (7.1절)
     } catch (err) {
-      alertStat('소스 오류: ' + err.message);
+      alertStat(I18n.t('msg.sourceError', { msg: err.message }));
     }
     syncVisibility();
     conn.applyMode();
@@ -318,7 +319,7 @@
       conn.update();
       dirty = true;
     } catch (err) {
-      alertStat('파일 오류: ' + err.message);
+      alertStat(I18n.t('msg.fileError', { msg: err.message }));
     }
   }
 
@@ -382,9 +383,10 @@
     try {
       const { skipped } = settings.importData(JSON.parse(await file.text()));
       applyAllControls();
-      alertStat(`설정 불러옴: ${file.name}` + (skipped.length ? ` (건너뜀: ${skipped.join(', ')})` : ''));
+      alertStat(I18n.t('msg.imported', { name: file.name })
+        + (skipped.length ? I18n.t('msg.importSkipped', { keys: skipped.join(', ') }) : ''));
     } catch (err) {
-      alertStat('설정 불러오기 실패: ' + (err instanceof SyntaxError ? 'JSON 형식 오류' : err.message));
+      alertStat(I18n.t('msg.importFailed', { msg: err instanceof SyntaxError ? I18n.t('msg.jsonError') : err.message }));
     }
   });
 
@@ -406,7 +408,28 @@
     panel: togglePanel,
     stats: () => document.body.classList.toggle('no-stats'),
   };
-  window.ledboardCommand = (name) => { if (commands[name]) commands[name](); };
+  window.ledboardCommand = (name) => {
+    if (name.startsWith('lang:')) setLang(name.slice(5));
+    else if (commands[name]) commands[name]();
+  };
+
+  // ---- 언어 ----------------------------------------------------------------
+  // 데스크톱 앱은 메뉴 문구를 페이지 언어에 맞추도록 알린다 (electron/preload.js)
+  const notifyShell = () => { if (window.ledboardShell) window.ledboardShell.setLang(I18n.lang); };
+  function setLang(lang) {
+    I18n.set(lang);
+    $('lang').value = I18n.lang;
+  }
+  $('lang').value = I18n.lang;
+  $('lang').addEventListener('change', (e) => setLang(e.target.value));
+  document.addEventListener('langchange', () => {
+    LedPreviews.drawAll(sprite, P);
+    conn.relabel();
+    if ($('src-kind').value === 'camera') listCameras().catch(() => {});
+    fpsT = 0;   // 상태 표시줄을 바로 다시 씀
+    notifyShell();
+  });
+  notifyShell();
   if (/\bElectron\//.test(navigator.userAgent)) document.body.classList.add('in-app');
 
   // 단축키 (7.5절): 입력란에 포커스가 있으면 무시
@@ -487,9 +510,9 @@
       fpsT = now;
       const r = getRenderer();
       let text = now < statUntil ? statMsg
-        : `${P.cols}×${P.rows} = ${(P.cols * P.rows).toLocaleString()} LED · 피치 ${layout.pitchCss}px · ${r.name} · ${fps.toFixed(0)} fps · ${renderMs.toFixed(1)} ms`
-          + (P.easeOn ? ` · 이징 ${pipeline.dynamics.active ? '진행 중' : '정지'}` : '')
-          + (P.idleOn ? ` · 감광 ${pipeline.dimmer.dimmed.toLocaleString()}개` : '');
+        : `${P.cols}×${P.rows} = ${(P.cols * P.rows).toLocaleString()} LED · ${I18n.t('stats.pitch')} ${layout.pitchCss}px · ${r.name} · ${fps.toFixed(0)} fps · ${renderMs.toFixed(1)} ms`
+          + (P.easeOn ? ` · ${I18n.t('stats.easing')} ${I18n.t(pipeline.dynamics.active ? 'stats.easingActive' : 'stats.easingIdle')}` : '')
+          + (P.idleOn ? ` · ${I18n.t('stats.dimmed', { n: pipeline.dimmer.dimmed.toLocaleString() })}` : '');
       if ($('src-kind').value === 'ws' && now >= statUntil) text += conn.statsSuffix();
       $('stats').textContent = text;
       if (channel.state === 'retry' || channel.lastError) conn.update();   // 카운트다운·오류 만료

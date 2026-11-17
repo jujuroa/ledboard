@@ -109,7 +109,7 @@
       this.needsBrightness = false;   // rgba·luma8은 셰이더에서 톤 처리 (frame.js 참고)
       this.canvas = canvas;
       const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, preserveDrawingBuffer: false });
-      if (!gl) throw new Error('WebGL2 미지원');
+      if (!gl) throw new Error(I18n.t('err.noWebGL2'));
       this.gl = gl;
 
       const prog = gl.createProgram();

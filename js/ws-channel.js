@@ -128,7 +128,7 @@
       this.ws = ws;
       ws.onopen = () => {
         if (ws.protocol !== SUBPROTOCOL) {
-          this._localError('BAD_PROTOCOL', `서버가 서브프로토콜 ${SUBPROTOCOL}을 선택하지 않음`);
+          this._localError('BAD_PROTOCOL', I18n.t('ws.err.protocol', { proto: SUBPROTOCOL }));
           ws.onclose = null;
           ws.close(1002);
           this.ws = null;
@@ -148,7 +148,7 @@
         this._statsTimer = 0;
         this.ws = null;
         if (ev.code === 4401 || ev.code === 4403) {
-          this._localError('AUTH', `인증 실패 (종료 코드 ${ev.code})`);
+          this._localError('AUTH', I18n.t('ws.err.auth', { code: ev.code }));
           this._setState('error');
           return;
         }
@@ -296,23 +296,23 @@
       this.stats.received++;
       this.stats.bytes += data.byteLength;
       if (data.byteLength > MAX_MESSAGE) {
-        this._error('TOO_LARGE', `메시지 크기 ${data.byteLength} > ${MAX_MESSAGE}`);
+        this._error('TOO_LARGE', I18n.t('ws.err.tooLarge', { size: data.byteLength, max: MAX_MESSAGE }));
         return;
       }
       const h = parseHeader(data);
       if (!h) {
-        this._error('BAD_MAGIC', '헤더 magic이 "LB"가 아님');
+        this._error('BAD_MAGIC', I18n.t('ws.err.magic'));
         return;
       }
       this.stats.lastSeq = h.seq;
       if (h.version !== 1) {
-        this._error('BAD_VERSION', `지원하지 않는 version ${h.version}`, h.seq);
+        this._error('BAD_VERSION', I18n.t('ws.err.version', { v: h.version }), h.seq);
         return;
       }
       if (h.type === T_IMAGE) this._onImage(h);
       else if (h.type === T_RAW) this._onRaw(h);
       else if (h.type === T_LED) this._onLed(h);
-      else this._error('UNKNOWN_TYPE', `알 수 없는 type 0x${h.type.toString(16)}`, h.seq);
+      else this._error('UNKNOWN_TYPE', I18n.t('ws.err.type', { type: h.type.toString(16) }), h.seq);
     }
 
     _onControl(text) {
@@ -330,7 +330,7 @@
 
     _onConfig(msg) {
       if (!this.hooks.getRemoteConfig()) {
-        this._error('CONFIG_DENIED', '시뮬레이터에서 원격 설정을 허용하지 않음');
+        this._error('CONFIG_DENIED', I18n.t('ws.err.configDenied'));
         return;
       }
       const cfg = {};
@@ -339,7 +339,7 @@
         if (msg[k] === undefined) continue;
         const v = msg[k];
         if (Number.isInteger(v) && v >= 1 && v <= 1024) cfg[k] = v;
-        else bad.push(`${k}=${JSON.stringify(v)} (1~1024 정수)`);
+        else bad.push(I18n.t('ws.err.intRange', { kv: `${k}=${JSON.stringify(v)}` }));
       }
       if (msg.ledTone !== undefined) {
         if (msg.ledTone === 'apply' || msg.ledTone === 'bypass') cfg.ledTone = msg.ledTone;
@@ -386,7 +386,7 @@
           bmp.close();
         }
       } catch (e) {
-        this._error('DECODE_FAILED', '이미지 디코드 실패', item.h.seq);
+        this._error('DECODE_FAILED', I18n.t('ws.err.decode'), item.h.seq);
       }
       this._decoding = false;
       const next = this._pendingImage;
@@ -404,7 +404,7 @@
       const hh = h.height;
       if (w < 1 || hh < 1 || w > MAX_RAW_SIDE || hh > MAX_RAW_SIDE) {
         this._error(w > MAX_RAW_SIDE || hh > MAX_RAW_SIDE ? 'TOO_LARGE' : 'BAD_LENGTH',
-          `RAW 크기 ${w}×${hh}`, h.seq);
+          I18n.t('ws.err.rawSize', { w, h: hh }), h.seq);
         return;
       }
       const n = w * hh;
@@ -457,7 +457,7 @@
       const { x, y, width: w, height: hh } = h;
       if (w < 1 || hh < 1 || x + w > this.cols || y + hh > this.rows) {
         this._error('BAD_REGION',
-          `영역 (${x},${y},${w},${hh})이 보드 ${this.cols}×${this.rows}를 벗어남`, h.seq);
+          I18n.t('ws.err.region', { x, y, w, h: hh, cols: this.cols, rows: this.rows }), h.seq);
         return;
       }
       const stride = Math.ceil((w * bits) / 8);

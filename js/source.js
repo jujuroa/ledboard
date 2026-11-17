@@ -105,7 +105,7 @@
           this.kind = 'image';
           resolve('image');
         };
-        img.onerror = () => reject(new Error('이미지를 읽을 수 없음'));
+        img.onerror = () => reject(new Error(I18n.t('err.imageRead')));
         img.src = url;
       });
     }

@@ -67,14 +67,14 @@
       }
       if (i === 0) settle = 0;
     }
-    $('ease-info').textContent = !p.easeOn ? '꺼짐 · 밝기가 즉시 바뀜'
-      : `오버슈트 ${over.toFixed(1)}% · 정착 ${settle == null ? `> ${EASE_PREVIEW_SEC}` : settle.toFixed(2)}초`
-        + (over > 0 ? ' (1 초과분은 표시 시 잘림)' : '');
+    $('ease-info').textContent = !p.easeOn ? I18n.t('ease.off')
+      : I18n.t('ease.info', { over: over.toFixed(1), settle: settle == null ? `> ${EASE_PREVIEW_SEC}` : settle.toFixed(2) })
+        + (over > 0 ? I18n.t('ease.clipped') : '');
   }
 
   function drawIdle(p) {
-    $('idle-info').textContent = !p.idleOn ? '꺼짐'
-      : `변화 없으면 ${p.idleHold}초 뒤부터 어두워짐 · 약 ${IdleDimmer.time95(p).toFixed(1)}초에 최저 ${Math.round(p.idleFloor * 100)}% 근처`;
+    $('idle-info').textContent = !p.idleOn ? I18n.t('idle.off')
+      : I18n.t('idle.info', { hold: p.idleHold, t95: IdleDimmer.time95(p).toFixed(1), floor: Math.round(p.idleFloor * 100) });
   }
 
   /** 세 미리보기를 모두 갱신 */

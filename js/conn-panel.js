@@ -12,15 +12,7 @@
   const $ = (id) => document.getElementById(id);
   const WS_URL_KEY = 'ledboard.wsUrl';
 
-  const STATE_LABEL = {
-    idle: '연결 안 됨',
-    connecting: '연결 중',
-    waiting: '연결됨 · 신호 없음',
-    receiving: '수신 중',
-    ended: '송출 종료',
-    retry: '재연결',
-    error: '오류',
-  };
+  const t = (k, p) => I18n.t(k, p);
 
   function validWsUrl(u) {
     return /^wss?:\/\/[^\s/]+/i.test(u);
@@ -68,12 +60,28 @@
       $('ws-token-show').addEventListener('click', () => {
         const t = $('ws-token');
         t.type = t.type === 'password' ? 'text' : 'password';
-        $('ws-token-show').textContent = t.type === 'password' ? '표시' : '숨김';
+        this.updateTokenButton();
       });
       $('ws-ledtone').addEventListener('change', (e) => {
         channel.setLedTone(e.target.value);
         this.applyMode();
       });
+    }
+
+    updateTokenButton() {
+      $('ws-token-show').textContent = t($('ws-token').type === 'password' ? 'ws.show' : 'ws.hide');
+    }
+
+    modeText() {
+      return t(this.channel.mode === 'direct' ? 'ws.modeDirect' : 'ws.modePicture');
+    }
+
+    /** 언어가 바뀌었을 때 동적 문구를 다시 그린다 */
+    relabel() {
+      this.updateTokenButton();
+      if ($('ws-url').classList.contains('invalid')) $('ws-url').title = t('ws.badUrl');
+      this.update();
+      this.applyMode();
     }
 
     /** 쿼리 파라미터로 받은 주소·토큰을 채운다 (저장하지 않음) */
@@ -86,7 +94,7 @@
       const url = $('ws-url').value.trim();
       if (!validWsUrl(url)) {
         $('ws-url').classList.add('invalid');
-        $('ws-url').title = 'ws:// 또는 wss:// 로 시작하는 주소 필요';
+        $('ws-url').title = t('ws.badUrl');
         return;
       }
       $('ws-url').classList.remove('invalid');
@@ -99,18 +107,18 @@
       const s = channel.state;
       if (s === 'retry') {
         const sec = Math.max(0, Math.ceil((channel.retryAt - performance.now()) / 1000));
-        return `재연결 ${sec}초 후`;
+        return t('ws.retryIn', { sec });
       }
-      if (s === 'receiving') return `수신 중 · ${channel.mode === 'direct' ? '직접 모드' : '그림 모드'}`;
-      if (s === 'error' && channel.lastError) return `오류 · ${channel.lastError.message}`;
-      return STATE_LABEL[s];
+      if (s === 'receiving') return t('ws.receivingMode', { mode: this.modeText() });
+      if (s === 'error' && channel.lastError) return t('ws.errorWith', { msg: channel.lastError.message });
+      return t('ws.st.' + s);
     }
 
     /** 상태 표시줄 끝에 붙일 WS 요약 */
     statsSuffix() {
       const channel = this.channel;
       return channel.state === 'receiving'
-        ? ` │ WS 수신 ${channel.rxFps.toFixed(1)} fps · 폐기 ${channel.stats.dropped} · ${channel.mode === 'direct' ? '직접 모드' : '그림 모드'}`
+        ? ' │ ' + t('ws.statsRx', { fps: channel.rxFps.toFixed(1), dropped: channel.stats.dropped, mode: this.modeText() })
         : ` │ WS ${this.statusText()}`;
     }
 
@@ -128,13 +136,13 @@
       const live = s === 'waiting' || s === 'receiving' || s === 'ended';
       const st2 = channel.stats;
       $('ws-rx').textContent = live
-        ? `${channel.rxFps.toFixed(1)} fps · 폐기 ${st2.dropped}`
-          + (channel.mode === 'picture' && st2.decoded ? ` · 디코드 ${st2.decodeMs.toFixed(1)} ms` : '')
+        ? t('ws.rxLine', { fps: channel.rxFps.toFixed(1), dropped: st2.dropped })
+          + (channel.mode === 'picture' && st2.decoded ? t('ws.decode', { ms: st2.decodeMs.toFixed(1) }) : '')
         : '—';
 
       const e = channel.lastError;
       $('ws-error').textContent = e && performance.now() - e.at < 10000
-        ? `최근 오류: ${e.code}${e.seq != null ? ` (seq ${e.seq})` : ''} — ${e.message}`
+        ? t('ws.lastError', { code: e.code, seq: e.seq != null ? ` (seq ${e.seq})` : '', msg: e.message })
         : '';
 
       // 신호 대기로 들어오면 보드를 꺼진 상태로 (이전 프레임이 있으면 유지)
@@ -147,10 +155,12 @@
       const badge = $('stage-badge');
       let text = '';
       if ($('src-kind').value === 'ws') {
-        if (s === 'waiting') text = '신호 대기';
-        else if (s === 'retry') text = `연결 끊김 · ${this.statusText().replace('재연결 ', '')} 재연결`;
-        else if (s === 'error') text = '연결 오류';
-        else if (s === 'ended') text = '송출 종료';
+        if (s === 'waiting') text = t('ws.badge.waiting');
+        else if (s === 'retry') {
+          const sec = Math.max(0, Math.ceil((channel.retryAt - performance.now()) / 1000));
+          text = t('ws.badge.retry', { sec });
+        } else if (s === 'error') text = t('ws.badge.error');
+        else if (s === 'ended') text = t('ws.badge.ended');
       }
       badge.textContent = text;
       badge.hidden = !text;
@@ -163,11 +173,12 @@
       this.getParams().bypass = bypass;
       const fit = $('fit');
       fit.disabled = direct;
-      fit.title = direct ? 'LED 직접 입력에는 적용되지 않음' : '';
+      fit.title = direct ? t('ws.fitDirect') : '';
       Settings.TONE_KEYS.forEach((k) => {
         const el = $(k);
         el.disabled = bypass;
-        (el.closest('label') || el).title = bypass ? 'bypass: 받은 값을 그대로 표시' : '';
+        const target = el.closest('label') || el;
+        target.title = bypass ? t('ws.toneBypass') : (target.dataset.i18nTitle ? t(target.dataset.i18nTitle) : '');
       });
       this.requestRender();
     }
