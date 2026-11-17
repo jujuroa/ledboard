@@ -35,6 +35,7 @@ function createWindow() {
     minHeight: 400,
     backgroundColor: '#000000',
     title: 'LED Board Simulator',
+    icon: path.join(__dirname, 'icon.png'),
     autoHideMenuBar: true,
     show: false,
     webPreferences: {

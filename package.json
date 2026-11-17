@@ -20,7 +20,8 @@
     "productName": "LEDBoard",
     "executableName": "LEDBoard",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "files": [
       "index.html",
@@ -33,9 +34,12 @@
       "target": [
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
-      ]
+      ],
+      "icon": "build/icon.ico"
     },
     "portable": {
       "artifactName": "LEDBoard-${version}-portable.exe"

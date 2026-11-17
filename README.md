@@ -43,6 +43,8 @@ npm start -- --ws=ws://127.0.0.1:8765/ --panel=0
 | `F12` | 개발자 도구 |
 | `F5`, `Ctrl+R` | 새로 고침 |
 
+아이콘은 `python build/gen_icon.py`로 다시 만든다(Pillow 필요). `build/icon.ico`와 `electron/icon.png`가 갱신된다.
+
 설정은 브라우저와 따로 앱의 사용자 데이터 폴더(`%APPDATA%\LEDBoard`)에 저장된다.
 
 ### 외부 프로그램에서 WebSocket으로 보내기
