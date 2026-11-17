@@ -13,52 +13,18 @@ docs/source-interface.md 5절 규격으로 시뮬레이터에 프레임을 보�
   raw     RAW 픽셀. 임의 해상도(--size)의 컬러 패턴을 보냄 (--format gray8|rgb24|rgba32)
   image   IMAGE. 파일 또는 폴더의 JPEG/PNG/WebP를 순서대로 보냄 (--interval)
 
-의존성: websockets (pip install websockets)
+의존성: websockets (pip install -r tools/requirements.txt)
 """
 import argparse
 import asyncio
 import json
 import math
-import struct
 import time
 from pathlib import Path
 
 import websockets
 
-SUBPROTOCOL = "ledboard.v1"
-HDR = struct.Struct("<2sBBBBHIIHHHH")    # 24 bytes, little-endian
-T_IMAGE, T_RAW, T_LED = 0x10, 0x11, 0x20
-COMMIT, CLEAR = 0x01, 0x02
-LED_FMT = {"l8": (1, 8), "l4": (2, 4), "l1": (3, 1)}
-RAW_FMT = {"gray8": (1, 1), "rgb24": (2, 3), "rgba32": (3, 4)}
-IMG_FMT = {".jpg": 1, ".jpeg": 1, ".png": 2, ".webp": 3}
-
-
-def header(type_, fmt, flags, seq, x=0, y=0, w=0, h=0):
-    ts = int(time.monotonic() * 1000) & 0xFFFFFFFF
-    return HDR.pack(b"LB", 1, type_, fmt, flags, 0, seq & 0xFFFFFFFF, ts, x, y, w, h)
-
-
-def pack_led(values, w, bits):
-    """values: 0~255 리스트(행 우선, 폭 w). 행마다 바이트 경계 정렬"""
-    if bits == 8:
-        return bytes(values)
-    out = bytearray()
-    for r in range(len(values) // w):
-        row = values[r * w:(r + 1) * w]
-        if bits == 4:
-            for c in range(0, w, 2):
-                hi = row[c] // 17
-                lo = row[c + 1] // 17 if c + 1 < w else 0
-                out.append((hi << 4) | lo)
-        else:
-            for c in range(0, w, 8):
-                byte = 0
-                for k in range(8):
-                    if c + k < w and row[c + k] >= 128:
-                        byte |= 0x80 >> k
-                out.append(byte)
-    return bytes(out)
+import ledboard_proto as proto
 
 
 def led_pattern(cols, rows, t):
@@ -161,36 +127,36 @@ class Session:
             await asyncio.sleep(max(0.0, nxt - time.monotonic()))
 
     async def send_led(self):
-        fmt, bits = LED_FMT[self.args.format or "l8"]
+        fmt = self.args.format or "l8"
         async for seq, t in self.frames():
             cols, rows = self.cols, self.rows
             vals = led_pattern(cols, rows, t)
             if self.args.regions and rows >= 2:
                 # 위·아래 절반을 따로 보내고 마지막에 COMMIT
                 h1 = rows // 2
-                parts = [(0, h1, 0), (h1, rows - h1, COMMIT)]
+                parts = [(0, h1, 0), (h1, rows - h1, proto.F_COMMIT)]
                 for y0, hh, fl in parts:
-                    data = pack_led(vals[y0 * cols:(y0 + hh) * cols], cols, bits)
-                    await self.ws.send(header(T_LED, fmt, fl, seq, 0, y0, cols, hh) + data)
+                    region = vals[y0 * cols:(y0 + hh) * cols]
+                    await self.ws.send(proto.led_msg(fmt, seq, region, 0, y0, cols, hh, fl))
             else:
-                data = pack_led(vals, cols, bits)
-                await self.ws.send(header(T_LED, fmt, COMMIT, seq, 0, 0, cols, rows) + data)
+                await self.ws.send(proto.led_msg(fmt, seq, vals, 0, 0, cols, rows))
 
     async def send_raw(self):
-        fmt, bpp = RAW_FMT[self.args.format or "rgb24"]
+        fmt = self.args.format or "rgb24"
+        bpp = proto.RAW_FMT[fmt][1]
         w, h = (int(v) for v in self.args.size.lower().split("x"))
         async for seq, t in self.frames():
-            await self.ws.send(header(T_RAW, fmt, 0, seq, 0, 0, w, h) + raw_pattern(w, h, t, bpp))
+            await self.ws.send(proto.raw_msg(fmt, seq, w, h, raw_pattern(w, h, t, bpp)))
 
     async def send_image(self):
         p = Path(self.args.path)
-        files = sorted(f for f in (p.iterdir() if p.is_dir() else [p]) if f.suffix.lower() in IMG_FMT)
+        files = sorted(f for f in (p.iterdir() if p.is_dir() else [p]) if f.suffix.lower() in proto.IMAGE_EXT)
         if not files:
             raise SystemExit(f"이미지 파일 없음: {p}")
         seq = 0
         while True:
             for f in files:
-                await self.ws.send(header(T_IMAGE, IMG_FMT[f.suffix.lower()], 0, seq) + f.read_bytes())
+                await self.ws.send(proto.image_msg(proto.IMAGE_EXT[f.suffix.lower()], seq, f.read_bytes()))
                 print(f"[send] IMAGE seq {seq} {f.name}")
                 seq += 1
                 if self.args.count and seq >= self.args.count:
@@ -226,12 +192,10 @@ async def main():
             pass
         print("[conn] closed")
 
-    async with websockets.serve(handler, args.host, args.port, subprotocols=[SUBPROTOCOL],
+    async with websockets.serve(handler, args.host, args.port, subprotocols=[proto.SUBPROTOCOL],
                                 max_size=None):
         print(f"ws://{args.host}:{args.port}/ 대기 중 ({args.mode})")
-        page = (Path(__file__).resolve().parent.parent / "index.html").as_uri()
-        host = "127.0.0.1" if args.host in ("0.0.0.0", "") else args.host
-        print(f"브라우저 주소창에 붙여넣기: {page}?ws=ws://{host}:{args.port}/")
+        print("브라우저 주소창에 붙여넣기:", proto.sim_url(args.host, args.port))
         await asyncio.Future()
 
 

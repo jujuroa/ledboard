@@ -97,6 +97,8 @@ LEDBoard/
 │   └── main.js           UI 바인딩, 레이아웃, 렌더 루프, 스트림 연결
 ├── tools/
 │   ├── requirements.txt  발신 도구 Python 의존성
+│   ├── ledboard_proto.py ledboard.v1 발신 측 공통 모듈 (헤더, 메시지, LED 비트 패킹)
+│   ├── test_ledboard_proto.py  위 모듈 단위 테스트
 │   ├── ws_sender.py      WebSocket 시험용 발신 도구
 │   └── webcam_sender.py  웹캠 → WebSocket 테스트베드
 └── docs/

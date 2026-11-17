@@ -20,12 +20,11 @@ docs/source-interface.md 의 계열 A(이미지 스트림) 경로를 시험한�
   --format jpeg   IMAGE(JPEG)  기본. 대역폭이 작음
   --format gray8  RAW(GRAY8)   흑백 무압축. 압축 손실 없음
 
-의존성: pip install websockets opencv-python
+의존성: pip install -r tools/requirements.txt
 """
 import argparse
 import asyncio
 import json
-import struct
 import sys
 import threading
 import time
@@ -33,15 +32,7 @@ import time
 import cv2
 import websockets
 
-SUBPROTOCOL = "ledboard.v1"
-HDR = struct.Struct("<2sBBBBHIIHHHH")   # 24 bytes, little-endian
-T_IMAGE, T_RAW = 0x10, 0x11
-F_JPEG, F_GRAY8 = 1, 1
-
-
-def header(type_, fmt, seq, w=0, h=0):
-    ts = int(time.monotonic() * 1000) & 0xFFFFFFFF
-    return HDR.pack(b"LB", 1, type_, fmt, 0, 0, seq & 0xFFFFFFFF, ts, 0, 0, w, h)
+import ledboard_proto as proto
 
 
 class Capture:
@@ -130,23 +121,10 @@ class Capture:
             return self.index, self.frame
 
 
-def sim_url(host, port):
-    """이 저장소의 index.html을 파일로 여는 전체 주소 (주소창에 그대로 붙여넣기용)"""
-    from pathlib import Path
-    page = (Path(__file__).resolve().parent.parent / "index.html").as_uri()
-    h = "127.0.0.1" if host in ("0.0.0.0", "") else host
-    return f"{page}?ws=ws://{h}:{port}/"
-
-
 def fit_size(w, h, max_w, max_h):
     """원본 비율을 유지하며 (max_w, max_h) 안에 들어가는 크기. 확대는 하지 않음"""
     s = min(max_w / w, max_h / h, 1.0)
     return max(1, round(w * s)), max(1, round(h * s))
-
-
-def hint_from_board(cols, rows):
-    """시뮬레이터의 hint 계산 규칙과 같음: 보드의 8배, 최대 1920x1080"""
-    return min(1920, cols * 8), min(1080, rows * 8)
 
 
 class Session:
@@ -169,20 +147,20 @@ class Session:
                 print(f"[hello] board {b['cols']}x{b['rows']} → 송신 최대 크기 {self.hint[0]}x{self.hint[1]}")
             elif t == "state":
                 b = m["board"]
-                self.hint = hint_from_board(b["cols"], b["rows"])
+                self.hint = proto.hint_from_board(b["cols"], b["rows"])
                 print(f"[state] board {b['cols']}x{b['rows']} → 송신 최대 크기 {self.hint[0]}x{self.hint[1]}")
             elif t == "stats":
                 self.sim = m
             elif t == "error":
                 print(f"[error] {m.get('code')} {m.get('message')}")
 
-    def encode(self, frame):
-        """(type, format, w, h, payload, 처리 ms). 송신 스레드에서 실행"""
+    def encode(self, frame, seq):
+        """(메시지, w, h, payload 크기, 처리 ms). 송신 스레드에서 실행"""
         t0 = time.perf_counter()
-        out = self._encode(frame)
-        return out + ((time.perf_counter() - t0) * 1000,)
+        msg, w, h = self._encode(frame, seq)
+        return msg, w, h, len(msg) - proto.HEADER.size, (time.perf_counter() - t0) * 1000
 
-    def _encode(self, frame):
+    def _encode(self, frame, seq):
         a = self.args
         fh, fw = frame.shape[:2]
         max_w, max_h = (a.width, a.height) if a.width and a.height else self.hint
@@ -193,9 +171,9 @@ class Session:
             frame = cv2.flip(frame, 1)
         if a.format == "gray8":
             g = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            return T_RAW, F_GRAY8, w, h, g.tobytes()
+            return proto.raw_msg("gray8", seq, w, h, g.tobytes()), w, h
         ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, a.quality])
-        return T_IMAGE, F_JPEG, w, h, buf.tobytes()
+        return proto.image_msg("jpeg", seq, buf.tobytes()), w, h
 
     async def run(self):
         reader = asyncio.create_task(self.reader())
@@ -215,12 +193,12 @@ class Session:
                 idx, frame = self.cap.latest()
                 if frame is not None and idx != last_idx:   # 새 프레임만 보냄
                     last_idx = idx
-                    type_, fmt, w, h, payload, ms = await asyncio.to_thread(self.encode, frame)
+                    msg, w, h, nb, ms = await asyncio.to_thread(self.encode, frame, seq)
                     enc_ms += ms
-                    await self.ws.send(header(type_, fmt, seq, w, h) + payload)
+                    await self.ws.send(msg)
                     seq += 1
                     sent += 1
-                    nbytes += len(payload)
+                    nbytes += nb
                     size = f"{w}x{h}"
                 now = time.monotonic()
                 if now - t_rep >= 2 and sent:
@@ -265,10 +243,10 @@ async def main():
             pass
         print("[conn] closed")
 
-    async with websockets.serve(handler, args.host, args.port, subprotocols=[SUBPROTOCOL], max_size=None):
+    async with websockets.serve(handler, args.host, args.port, subprotocols=[proto.SUBPROTOCOL], max_size=None):
         src = args.video or f"camera {args.camera}"
         print(f"ws://{args.host}:{args.port}/ 대기 중 ({src}, {args.format}). 시뮬레이터가 접속하면 카메라를 켬")
-        print("브라우저 주소창에 붙여넣기:", sim_url(args.host, args.port))
+        print("브라우저 주소창에 붙여넣기:", proto.sim_url(args.host, args.port))
         await asyncio.Future()
 
 

@@ -3,7 +3,7 @@
 - 작성일: 2026-11-17
 - 버전: v1 (초안)
 - 상태: WebSocket 채널(5절)과 그에 해당하는 UX(7절) 구현 완료(`js/ws-channel.js`). WebRTC(WHEP)·화면 캡처는 미구현
-- 시험 도구: `tools/ws_sender.py` (9절)
+- 시험 도구: `tools/ws_sender.py` (9절). 발신 측 프로토콜 구현은 `tools/ledboard_proto.py`
 - 관련 문서: [설계 문서](design.md)
 
 ## 1. 개요
@@ -614,6 +614,8 @@ LED 직접 입력(직접 모드)에서는 화면 맞춤과 톤 처리가 의미 
 | 공통 옵션 | `--cols 64 --rows 32 --ledtone bypass` | 연결 직후 `config` 전송 |
 
 웹캠 영상을 IMAGE(JPEG)로 보내는 테스트베드는 `tools/webcam_sender.py`다. 사용법과 처리 과정은 [웹캠 테스트베드](webcam-testbed.md)에 있다.
+
+두 도구는 헤더·메시지 생성을 `tools/ledboard_proto.py` 하나에서 가져다 쓴다. 규격(헤더 구조, `type`·`format` 코드, LED 비트 패킹)이 바뀌면 수신 측 `js/ws-channel.js`와 이 모듈 두 곳만 고친다. 모듈의 단위 테스트는 `python -m unittest discover -s tools`로 돌린다.
 
 도구는 시뮬레이터가 보내는 `hello`·`state`·`stats`·`error`를 출력한다. `raw` 모드는 패턴을 순수 Python으로 만들어서 320×180이면 초당 몇 프레임밖에 못 보낸다. 시뮬레이터 쪽 한계가 아니다.
 
