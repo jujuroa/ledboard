@@ -20,6 +20,31 @@
 
 WebGL2를 지원하지 않는 브라우저에서는 Canvas2D 렌더러로 자동 전환된다.
 
+### 데스크톱 앱 (Electron)
+
+같은 웹 코드를 Electron 창으로 띄운다. 브라우저·로컬 서버 없이 카메라 입력과 WebSocket 수신이 모두 동작한다.
+
+```bash
+npm install
+npm start                 # 개발 실행
+npm run dist              # dist/LEDBoard-<버전>-portable.exe (설치 없는 단일 실행 파일)
+```
+
+브라우저의 쿼리 파라미터는 명령행 인자로 준다. 키는 아래 쿼리 표와 같다.
+
+```bash
+LEDBoard-1.0.0-portable.exe --ws=ws://127.0.0.1:8765/ --panel=0 --cols=96 --rows=48
+npm start -- --ws=ws://127.0.0.1:8765/ --panel=0
+```
+
+| 단축키 | 동작 |
+|---|---|
+| `F11` | 창 전체 화면 |
+| `F12` | 개발자 도구 |
+| `F5`, `Ctrl+R` | 새로 고침 |
+
+설정은 브라우저와 따로 앱의 사용자 데이터 폴더(`%APPDATA%\LEDBoard`)에 저장된다.
+
 ### 외부 프로그램에서 WebSocket으로 보내기
 
 시뮬레이터가 WebSocket 클라이언트로 접속하고, 발신 프로그램이 서버가 된다. 시험용 발신 도구가 들어 있다.

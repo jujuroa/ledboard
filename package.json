@@ -1,0 +1,44 @@
+{
+  "name": "ledboard",
+  "version": "1.0.0",
+  "description": "단색 LED 전광판 시뮬레이터",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --win --dir",
+    "dist": "electron-builder --win portable"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.ledboard.simulator",
+    "productName": "LEDBoard",
+    "executableName": "LEDBoard",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "css/**/*",
+      "js/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "LEDBoard-${version}-portable.exe"
+    }
+  }
+}
