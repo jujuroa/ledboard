@@ -155,3 +155,19 @@ vite.config.ts.timestamp-*
 .nx/cache
 .nx/workspace-data
 .nx/migrate-runs
+
+# ---- LEDBoard ----
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# 에디터·뷰어 상태
+.mdviewer/
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store

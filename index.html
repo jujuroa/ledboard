@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LED Board Simulator</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main id="stage">
+    <canvas id="cv-gl"></canvas>
+    <canvas id="cv-2d" hidden></canvas>
+    <div id="drop-hint">이미지 / 영상 파일을 여기에 놓기</div>
+    <div id="stage-badge" hidden></div>
+    <div id="toast" hidden></div>
+    <div id="stats"></div>
+  </main>
+
+  <aside id="panel">
+    <header>
+      <h1>LED Board</h1>
+      <button id="btn-panel" title="패널 접기">⟨</button>
+    </header>
+
+    <section>
+      <h2>소스</h2>
+      <div class="row">
+        <select id="src-kind">
+          <optgroup label="내장">
+            <option value="pattern:gradient">패턴 · 밝기 계단 + 파형</option>
+            <option value="pattern:plasma">패턴 · 플라즈마</option>
+            <option value="pattern:clock">패턴 · 시계</option>
+            <option value="text">텍스트 스크롤</option>
+          </optgroup>
+          <optgroup label="로컬">
+            <option value="file">파일 (이미지 / 영상)</option>
+            <option value="camera">카메라</option>
+            <option value="screen" disabled>화면 캡처 (예정)</option>
+          </optgroup>
+          <optgroup label="외부 스트림">
+            <option value="ws">WebSocket</option>
+            <option value="whep" disabled>WebRTC · WHEP (예정)</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="conn" data-for="ws">
+        <div class="row">
+          <span class="lbl">URL</span>
+          <input id="ws-url" type="text" placeholder="ws://127.0.0.1:8765/" spellcheck="false">
+        </div>
+        <div class="row">
+          <span class="lbl">토큰</span>
+          <input id="ws-token" type="password" placeholder="(선택)" autocomplete="off">
+          <button id="ws-token-show" title="토큰 표시">표시</button>
+        </div>
+        <div class="row">
+          <button id="ws-connect">연결</button>
+          <button id="ws-disconnect">끊기</button>
+        </div>
+        <div class="kv"><span class="lbl">상태</span><span id="ws-status"><i class="dot"></i>연결 안 됨</span></div>
+        <div class="kv"><span class="lbl">수신</span><span id="ws-rx">—</span></div>
+        <label class="check"><input id="remoteConfig" type="checkbox" checked> 원격 설정 허용</label>
+        <div class="row">
+          <span class="lbl">LED 톤</span>
+          <select id="ws-ledtone" title="LED 직접 입력 값의 톤 처리">
+            <option value="apply">apply (톤 처리 적용)</option>
+            <option value="bypass">bypass (값 그대로)</option>
+          </select>
+        </div>
+        <div id="ws-error" class="err"></div>
+      </div>
+      <div class="row" data-for="text">
+        <input id="text" type="text" value="HELLO LED BOARD  ★  안녕하세요  ">
+      </div>
+      <label class="slider" data-for="text">스크롤 속도 <output></output>
+        <input id="textSpeed" type="range" min="0" max="120" step="1" value="20">
+      </label>
+      <div class="row" data-for="file">
+        <button id="btn-open">파일 열기…</button>
+        <button id="btn-play">재생 / 정지</button>
+        <input id="file" type="file" accept="image/*,video/*" hidden>
+      </div>
+      <div class="row">
+        <span class="lbl">맞춤</span>
+        <select id="fit">
+          <option value="contain">전체 보기 (contain)</option>
+          <option value="cover">채우기 (cover)</option>
+          <option value="stretch">늘리기 (stretch)</option>
+        </select>
+      </div>
+    </section>
+
+    <section>
+      <h2>해상도</h2>
+      <div class="row">
+        <select id="preset">
+          <option value="">프리셋…</option>
+          <option value="32x16">32 × 16</option>
+          <option value="64x32">64 × 32</option>
+          <option value="96x48">96 × 48</option>
+          <option value="128x64">128 × 64</option>
+          <option value="160x90">160 × 90</option>
+          <option value="192x108">192 × 108</option>
+          <option value="256x128">256 × 128</option>
+          <option value="320x180">320 × 180</option>
+        </select>
+      </div>
+      <div class="row">
+        <input id="cols" type="number" min="1" max="1024" value="96"> ×
+        <input id="rows" type="number" min="1" max="1024" value="48">
+      </div>
+      <label class="check"><input id="autoPitch" type="checkbox" checked> 화면에 맞춰 피치 자동</label>
+      <label class="slider">피치(px) <output></output>
+        <input id="pitch" type="range" min="2" max="48" step="0.5" value="10">
+      </label>
+      <div class="row">
+        <span class="lbl">소자 모양</span>
+        <select id="shape">
+          <option value="round">원형</option>
+          <option value="square">사각형</option>
+        </select>
+      </div>
+    </section>
+
+    <section>
+      <h2>LED 색</h2>
+      <div class="swatches" id="swatches">
+        <button data-c="#ff2a1a" style="--c:#ff2a1a" title="Red"></button>
+        <button data-c="#ffa21a" style="--c:#ffa21a" title="Amber"></button>
+        <button data-c="#3aff4a" style="--c:#3aff4a" title="Green"></button>
+        <button data-c="#2a7bff" style="--c:#2a7bff" title="Blue"></button>
+        <button data-c="#f4f6ff" style="--c:#f4f6ff" title="White"></button>
+        <input id="color" type="color" value="#ffa21a">
+      </div>
+      <label class="slider">세기 <output></output>
+        <input id="intensity" type="range" min="0" max="3" step="0.01" value="1">
+      </label>
+      <label class="slider">꺼진 소자 보이기 <output></output>
+        <input id="offLevel" type="range" min="0" max="0.3" step="0.005" value="0.06">
+      </label>
+    </section>
+
+    <section>
+      <h2>글로우 (단일 이미지)</h2>
+      <canvas id="sprite-preview" width="128" height="128"></canvas>
+      <label class="slider">다이 지름 <output></output>
+        <input id="core" type="range" min="0.1" max="1" step="0.01" value="0.62">
+      </label>
+      <label class="slider">헤일로 세기 <output></output>
+        <input id="halo" type="range" min="0" max="1.5" step="0.01" value="0.55">
+      </label>
+      <label class="slider">헤일로 폭 <output></output>
+        <input id="haloWidth" type="range" min="0.05" max="2" step="0.01" value="0.4">
+      </label>
+      <label class="slider">스프라이트 반경 <output></output>
+        <input id="spread" type="range" min="0.6" max="8" step="0.1" value="3">
+      </label>
+      <label class="slider" title="0 = 순수 투명도 제어. 값을 올리면 코어는 포화되고 꼬리가 들려 확장이 강조됨 (WebGL 전용)">노출 압축 <output></output>
+        <input id="exposure" type="range" min="0" max="12" step="0.1" value="0">
+      </label>
+    </section>
+
+    <section>
+      <h2>톤</h2>
+      <label class="slider">밝기 <output></output>
+        <input id="brightness" type="range" min="-1" max="1" step="0.01" value="0">
+      </label>
+      <label class="slider">대비 <output></output>
+        <input id="contrast" type="range" min="0" max="4" step="0.01" value="1">
+      </label>
+      <label class="slider">감마 <output></output>
+        <input id="gamma" type="range" min="0.2" max="4" step="0.01" value="1">
+      </label>
+      <div class="row">
+        <span class="lbl">계조</span>
+        <select id="levels">
+          <option value="2">1 bit (On/Off)</option>
+          <option value="4">2 bit (4)</option>
+          <option value="8">3 bit (8)</option>
+          <option value="16">4 bit (16)</option>
+          <option value="64">6 bit (64)</option>
+          <option value="256" selected>8 bit (256)</option>
+        </select>
+      </div>
+      <label class="slider" data-for="bit1">임계값 <output></output>
+        <input id="threshold" type="range" min="0" max="1" step="0.01" value="0.5">
+      </label>
+      <label class="check"><input id="invert" type="checkbox"> 반전</label>
+    </section>
+
+    <section>
+      <h2>밝기 이징 (가속도 모델)</h2>
+      <label class="check" title="소자마다 밝기와 변화 속도를 두고, 목표까지의 거리를 힘으로 적분"><input id="easeOn" type="checkbox" checked> 이징 사용</label>
+      <canvas id="ease-preview" width="268" height="76" title="0 → 1 계단 입력에 대한 밝기 응답 (가로 1초)"></canvas>
+      <div id="ease-info" class="hint"></div>
+      <label class="slider" title="고유 진동수. 클수록 빠르게 따라감">반응 속도(Hz) <output></output>
+        <input id="easeFreq" type="range" min="0.5" max="20" step="0.1" value="4">
+      </label>
+      <label class="slider" title="1 미만: 목표를 지나쳤다 돌아옴, 1: 임계 감쇠, 1 초과: 느리게 다가감">감쇠비 ζ <output></output>
+        <input id="easeZeta" type="range" min="0.05" max="2" step="0.01" value="0.6">
+      </label>
+    </section>
+
+    <section>
+      <h2>정지 소자 감광</h2>
+      <label class="check" title="밝기가 일정 수준 이상 변하지 않는 소자를 서서히 어둡게"><input id="idleOn" type="checkbox"> 감광 사용</label>
+      <div id="idle-info" class="hint"></div>
+      <label class="slider" title="밝기가 이 값보다 크게 바뀌어야 '변화'로 봄 (0~1). 영상 노이즈를 거르려면 0.05 이상">변화 기준 <output></output>
+        <input id="idleThr" type="range" min="0.01" max="0.5" step="0.01" value="0.06">
+      </label>
+      <label class="slider" title="변화가 멈춘 뒤 어두워지기 시작할 때까지 기다리는 시간">유지 시간(초) <output></output>
+        <input id="idleHold" type="range" min="0" max="60" step="0.5" value="3">
+      </label>
+      <label class="slider" title="지수 감쇠 시상수 τ. 이 시간마다 남은 차이가 약 37%로 줄어듦">어두워지는 시간 τ(초) <output></output>
+        <input id="idleTau" type="range" min="0.2" max="60" step="0.1" value="4">
+      </label>
+      <label class="slider" title="감광의 하한. 원래 밝기 대비 비율">최저 밝기 <output></output>
+        <input id="idleFloor" type="range" min="0" max="1" step="0.01" value="0.15">
+      </label>
+    </section>
+
+    <section>
+      <h2>기타</h2>
+      <div class="row">
+        <span class="lbl">렌더러</span>
+        <select id="renderer">
+          <option value="gl">WebGL2 (인스턴싱)</option>
+          <option value="2d">Canvas2D (소자별 drawImage)</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="btn-snap">PNG 저장</button>
+        <button id="btn-reset">설정 초기화</button>
+      </div>
+    </section>
+  </aside>
+
+  <script src="js/glow-sprite.js"></script>
+  <script src="js/tone.js"></script>
+  <script src="js/led-dynamics.js"></script>
+  <script src="js/idle-dimmer.js"></script>
+  <script src="js/source.js"></script>
+  <script src="js/renderer-gl.js"></script>
+  <script src="js/renderer-2d.js"></script>
+  <script src="js/ws-channel.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

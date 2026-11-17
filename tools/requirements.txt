@@ -1,0 +1,6 @@
+# ws_sender.py, webcam_sender.py 의존성
+#   pip install -r tools/requirements.txt
+websockets==17.4
+# webcam_sender.py 전용
+opencv-python==5.0.0.93
+numpy==2.5.5
