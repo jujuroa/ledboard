@@ -75,6 +75,10 @@ body {
 body.collapsed #panel { margin-right: -260px; }
 body.collapsed #panel > section { visibility: hidden; }
 body.collapsed #btn-panel { transform: rotate(180deg); }
+/* 접히면 왼쪽 40px만 보이므로 제목·스크롤바를 숨기고 버튼을 그 안에 둔다. */
+body.collapsed #panel { overflow: hidden; padding-left: 6px; }
+body.collapsed #panel header { justify-content: flex-start; }
+body.collapsed #panel h1 { display: none; }
 
 #panel header {
   position: sticky;
