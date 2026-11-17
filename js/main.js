@@ -156,6 +156,7 @@
       if (f === 'text') show = kind === 'text';
       else if (f === 'file') show = kind === 'file';
       else if (f === 'ws') show = kind === 'ws';
+      else if (f === 'camera') show = kind === 'camera';
       else if (f === 'bit1') show = $('levels').value === '2';
       el.hidden = !show;
     });
@@ -211,12 +212,84 @@
     onChange({ target: $('color') });
   });
 
+  // ---- 카메라 장치 ----------------------------------------------------------
+  // 시스템 기본 장치가 가상 카메라(예: Mirametrix Virtual Camera)인 PC가 있어 장치를 고르게 한다.
+  // 고른 장치는 설정 키와 별도로 저장한다.
+  const CAM_KEY = 'ledboard.cameraDevice';
+  const loadCamPref = () => { try { return localStorage.getItem(CAM_KEY) || ''; } catch (_) { return ''; } };
+  const saveCamPref = (id) => { try { localStorage.setItem(CAM_KEY, id); } catch (_) { /* 저장 불가 무시 */ } };
+
+  /** 카메라 목록을 선택 상자에 채운다. 레이블은 권한을 받기 전에는 비어 있을 수 있음 */
+  async function listCameras() {
+    const devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+    const sel = $('cam-device');
+    const cur = sel.value;
+    sel.replaceChildren(...devs.map((d, i) => new Option(d.label || `카메라 ${i + 1}`, d.deviceId)));
+    if (devs.some((d) => d.deviceId === cur)) sel.value = cur;
+    return devs;
+  }
+
+  /** 저장된 장치 → 가상 카메라가 아닌 첫 장치 → 첫 장치 순으로 고른다. */
+  function pickCamera(devs) {
+    const saved = loadCamPref();
+    if (saved && devs.some((d) => d.deviceId === saved)) return saved;
+    const real = devs.find((d) => d.label && !/virtual|가상/i.test(d.label));
+    return (real || devs[0] || {}).deviceId || '';
+  }
+
+  /** getUserMedia 오류를 원인이 드러나는 문구로 바꾼다. */
+  function cameraError(err) {
+    const why = {
+      NotReadableError: '다른 프로그램이 카메라를 사용 중이거나 장치를 열 수 없음',
+      NotAllowedError: '카메라 권한이 거부됨 (Windows 설정 → 개인 정보 및 보안 → 카메라 확인)',
+      NotFoundError: '카메라 장치를 찾을 수 없음',
+      OverconstrainedError: '선택한 카메라 장치를 찾을 수 없음',
+    }[err && err.name];
+    return why ? new Error(why) : err;
+  }
+
+  /** @param deviceId 비우면 pickCamera로 고른다 */
+  async function startCamera(deviceId) {
+    const sel = $('cam-device');
+    try {
+      let devs = await listCameras();
+      const hadLabels = devs.some((d) => d.label);
+      const target = deviceId || pickCamera(devs);
+      sel.value = target;  // 실패해도 시도한 장치가 보이게
+      let used = await source.useCamera(target);
+      devs = await listCameras();
+      // 브라우저는 권한을 받기 전에 레이블을 주지 않으므로, 받은 뒤 다시 골라 본다.
+      if (!deviceId && !hadLabels) {
+        const better = pickCamera(devs);
+        if (better && better !== used) used = await source.useCamera(better);
+      }
+      sel.value = used;
+    } catch (err) {
+      throw cameraError(err);
+    }
+  }
+
+  $('cam-device').addEventListener('change', async (e) => {
+    saveCamPref(e.target.value);
+    if ($('src-kind').value !== 'camera') return;
+    try {
+      await startCamera(e.target.value);
+    } catch (err) {
+      alertStat('카메라 오류: ' + err.message);
+    }
+    dirty = true;
+  });
+
+  navigator.mediaDevices?.addEventListener('devicechange', () => {
+    if ($('src-kind').value === 'camera') listCameras().catch(() => {});
+  });
+
   async function selectSource(value) {
     if (value !== 'ws') channel.disconnect();
     try {
       if (value.startsWith('pattern:')) source.usePattern(value.slice(8));
       else if (value === 'text') source.useText($('text').value);
-      else if (value === 'camera') await source.useCamera();
+      else if (value === 'camera') await startCamera();
       else if (value === 'file' && !source.media) $('file').click();
       // ws: 바로 연결하지 않음. 연결 패널에서 [연결] (7.1절)
     } catch (err) {

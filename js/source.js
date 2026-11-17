@@ -110,9 +110,14 @@
       });
     }
 
-    async useCamera() {
+    /**
+     * @param deviceId  카메라 장치 ID. 비우면 시스템 기본 장치
+     * @returns 실제로 열린 장치의 ID
+     */
+    async useCamera(deviceId) {
       this._release();
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      const video = deviceId ? { deviceId: { exact: deviceId } } : true;
+      const stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
       const v = document.createElement('video');
       v.srcObject = stream;
       v.muted = true;
@@ -121,6 +126,7 @@
       this.stream = stream;
       this.media = v;
       this.kind = 'camera';
+      return stream.getVideoTracks()[0].getSettings().deviceId || '';
     }
 
     togglePlay() {
