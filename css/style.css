@@ -68,7 +68,9 @@ body {
   background: var(--panel);
   border-left: 1px solid var(--line);
   overflow-y: auto;
-  padding: 0 14px 20px;
+  --pad-l: 14px;
+  --pad-r: 14px;
+  padding: 0 var(--pad-r) 20px var(--pad-l);
   transition: margin-right .2s;
 }
 
@@ -78,7 +80,7 @@ body.collapsed #btn-panel { transform: rotate(180deg); }
 /* 데스크톱 앱은 이 버튼들을 메뉴 막대로 제공 */
 body.in-app .panel-actions { display: none; }
 /* 접히면 왼쪽 40px만 보이므로 제목·스크롤바를 숨기고 버튼을 그 안에 둔다. */
-body.collapsed #panel { overflow: hidden; padding-left: 6px; }
+body.collapsed #panel { overflow: hidden; --pad-l: 6px; }
 body.collapsed #panel header { justify-content: flex-start; }
 body.collapsed #panel h1 { display: none; }
 
@@ -90,7 +92,9 @@ body.collapsed #panel h1 { display: none; }
   align-items: center;
   justify-content: space-between;
   background: var(--panel);
-  padding: 12px 0 8px;
+  /* 패널 좌우 padding까지 덮어야 스크롤된 내용이 제목 양옆으로 비치지 않는다. */
+  margin: 0 calc(-1 * var(--pad-r)) 0 calc(-1 * var(--pad-l));
+  padding: 12px var(--pad-r) 8px var(--pad-l);
 }
 
 h1 {
