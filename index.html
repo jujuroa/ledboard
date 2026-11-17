@@ -233,11 +233,12 @@
           <option value="2d">Canvas2D (소자별 drawImage)</option>
         </select>
       </div>
-      <div class="row">
+      <!-- 데스크톱 앱에서는 메뉴 막대로 옮겨 가므로 숨김 (body.in-app) -->
+      <div class="row panel-actions">
         <button id="btn-snap">PNG 저장</button>
         <button id="btn-reset">설정 초기화</button>
       </div>
-      <div class="row">
+      <div class="row panel-actions">
         <button id="btn-export" title="현재 설정을 JSON 파일로 저장">설정 내보내기</button>
         <button id="btn-import" title="JSON 설정 파일 불러오기">설정 불러오기…</button>
         <input id="settings-file" type="file" accept=".json,application/json" hidden>

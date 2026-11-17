@@ -4,15 +4,15 @@
  * 웹 코드는 그대로 쓰고, 브라우저에서 쿼리로 주던 옵션은 명령행 인자로 받는다.
  *   LEDBoard.exe --ws=ws://127.0.0.1:8765/ --panel=0 --cols=96 --rows=48
  *
- * 단축키(메뉴 막대가 없으므로 여기서 처리)
- *   F11            창 전체 화면 (페이지의 F 키는 HTML 전체 화면)
- *   F12            개발자 도구
- *   Ctrl+R / F5    새로 고침
+ * 메뉴 막대
+ *   파일  PNG 저장(Ctrl+S), 설정 내보내기(Ctrl+E), 설정 불러오기(Ctrl+O), 설정 초기화, 종료
+ *   보기  설정 패널(H), 상태 표시줄(S), 전체 화면(F11), 새로 고침(Ctrl+R, F5), 개발자 도구(F12)
+ * 메뉴 항목은 페이지의 window.ledboardCommand(이름)을 부른다 (js/main.js).
  */
 'use strict';
 
 const path = require('path');
-const { app, BrowserWindow, session, shell } = require('electron');
+const { app, BrowserWindow, Menu, session, shell } = require('electron');
 
 // 페이지가 읽는 쿼리 키 (README의 쿼리 파라미터 표와 같음)
 const QUERY_KEYS = ['ws', 'token', 'cols', 'rows', 'panel', 'stats'];
@@ -27,6 +27,46 @@ function queryFromArgv(argv) {
   return query;
 }
 
+/**
+ * 페이지 명령 실행. userGesture=true로 실행해야 파일 선택 창(설정 불러오기)이 열린다.
+ */
+function pageCommand(win, name) {
+  if (!win || win.isDestroyed()) return;
+  win.webContents.executeJavaScript(`window.ledboardCommand && window.ledboardCommand(${JSON.stringify(name)})`, true)
+    .catch(() => {});
+}
+
+function buildMenu(win) {
+  const cmd = (name) => () => pageCommand(win, name);
+  return Menu.buildFromTemplate([
+    {
+      label: '파일(&F)',
+      submenu: [
+        { label: 'PNG 저장', accelerator: 'CmdOrCtrl+S', click: cmd('snap') },
+        { type: 'separator' },
+        { label: '설정 내보내기…', accelerator: 'CmdOrCtrl+E', click: cmd('export') },
+        { label: '설정 불러오기…', accelerator: 'CmdOrCtrl+O', click: cmd('import') },
+        { label: '설정 초기화', click: cmd('reset') },
+        { type: 'separator' },
+        { label: '종료', role: 'quit' },
+      ],
+    },
+    {
+      label: '보기(&V)',
+      submenu: [
+        // H·S는 페이지가 직접 처리한다(입력란 포커스 시 무시). 메뉴에는 표시만 한다.
+        { label: '설정 패널 접기·펴기', accelerator: 'H', registerAccelerator: false, click: cmd('panel') },
+        { label: '상태 표시줄 표시·숨김', accelerator: 'S', registerAccelerator: false, click: cmd('stats') },
+        { type: 'separator' },
+        { label: '전체 화면', role: 'togglefullscreen' },
+        { type: 'separator' },
+        { label: '새로 고침', role: 'reload' },
+        { label: '개발자 도구', accelerator: 'F12', click: () => win.webContents.toggleDevTools() },
+      ],
+    },
+  ]);
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1400,
@@ -36,7 +76,6 @@ function createWindow() {
     backgroundColor: '#000000',
     title: 'LED Board Simulator',
     icon: path.join(__dirname, 'icon.png'),
-    autoHideMenuBar: true,
     show: false,
     webPreferences: {
       contextIsolation: true,
@@ -46,18 +85,12 @@ function createWindow() {
       backgroundThrottling: false,
     },
   });
-  win.setMenu(null);
+  win.setMenu(buildMenu(win));
   win.once('ready-to-show', () => win.show());
 
+  // F5 새로 고침 (메뉴의 Ctrl+R과 같음)
   win.webContents.on('before-input-event', (event, input) => {
-    if (input.type !== 'keyDown') return;
-    if (input.key === 'F11') {
-      win.setFullScreen(!win.isFullScreen());
-      event.preventDefault();
-    } else if (input.key === 'F12') {
-      win.webContents.toggleDevTools();
-      event.preventDefault();
-    } else if (input.key === 'F5' || (input.control && input.key.toLowerCase() === 'r')) {
+    if (input.type === 'keyDown' && input.key === 'F5') {
       win.webContents.reload();
       event.preventDefault();
     }

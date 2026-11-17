@@ -395,6 +395,20 @@
 
   $('btn-panel').addEventListener('click', togglePanel);
 
+  // ---- 데스크톱 앱 메뉴 -----------------------------------------------------
+  // Electron 셸의 메뉴 막대가 window.ledboardCommand(이름)으로 호출한다 (electron/main.js).
+  // 앱에서는 패널의 동작 버튼 줄을 숨기고, 브라우저에서는 그대로 둔다.
+  const commands = {
+    snap: () => $('btn-snap').click(),
+    export: () => $('btn-export').click(),
+    import: () => $('btn-import').click(),
+    reset: () => $('btn-reset').click(),
+    panel: togglePanel,
+    stats: () => document.body.classList.toggle('no-stats'),
+  };
+  window.ledboardCommand = (name) => { if (commands[name]) commands[name](); };
+  if (/\bElectron\//.test(navigator.userAgent)) document.body.classList.add('in-app');
+
   // 단축키 (7.5절): 입력란에 포커스가 있으면 무시
   document.addEventListener('keydown', (e) => {
     const t = e.target;
