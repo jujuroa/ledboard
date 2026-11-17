@@ -3,6 +3,7 @@
  *
  * 설정 키는 패널 컨트롤의 id와 같다. 값의 원본은 DOM이고, read()가 렌더링에 쓰는 파라미터 P를 만든다.
  *  - 저장: localStorage(STORE_KEY)에 키별 값
+ *  - 파일: exportData()/importData()로 JSON 내보내기·불러오기
  *  - 쿼리 파라미터(cols, rows)는 이번 실행에만 적용하고 저장하지 않는다 (docs/source-interface.md 7.5절).
  *    사용자나 발신 측이 그 값을 직접 바꾸면 release(id)로 다시 저장 대상이 된다.
  */
@@ -22,6 +23,7 @@
   /** LED 직접 입력 bypass일 때 비활성화하는 톤 컨트롤 */
   const TONE_KEYS = ['brightness', 'contrast', 'gamma', 'levels', 'threshold', 'invert'];
   const MAX_SIDE = 1024;
+  const FILE_VERSION = 1;   // 설정 파일(내보내기) 형식 버전
 
   const getVal = (el) => (el.type === 'checkbox' ? el.checked : el.value);
   function setVal(el, v) {
@@ -94,6 +96,43 @@
     restoreDefaults() {
       ALL_KEYS.forEach((k) => setVal($(k), this.defaults[k]));
       this.overrides.clear();
+    }
+
+    /** 내보내기 파일 내용. 쿼리로 덮어쓴 키도 지금 화면에 보이는 값으로 담는다 */
+    exportData() {
+      const s = {};
+      ALL_KEYS.forEach((k) => { s[k] = getVal($(k)); });
+      return { app: 'ledboard', version: FILE_VERSION, savedAt: new Date().toISOString(), settings: s };
+    }
+
+    /**
+     * 내보낸 파일(또는 settings 객체만)을 컨트롤에 반영한다. 모르는 키와 형식이 맞지 않는 값은 건너뛴다.
+     * 저장은 호출자가 한다.
+     * @returns {{applied: number, skipped: string[]}}
+     */
+    importData(data) {
+      if (!data || typeof data !== 'object') throw new Error('설정 파일 형식이 아님');
+      if (data.app !== undefined && data.app !== 'ledboard') throw new Error('LEDBoard 설정 파일이 아님');
+      const src = data.settings && typeof data.settings === 'object' ? data.settings : data;
+      let applied = 0;
+      const skipped = [];
+      ALL_KEYS.forEach((k) => {
+        if (!(k in src)) return;
+        const v = src[k];
+        const el = $(k);
+        let ok;
+        if (NUM_KEYS.includes(k)) ok = Number.isFinite(Number(v)) && v !== '' && v !== null;
+        else if (CHK_KEYS.includes(k)) ok = typeof v === 'boolean';
+        else if (SEL_KEYS.includes(k)) ok = [...el.options].some((o) => o.value === v && !o.disabled);
+        else if (k === 'color') ok = /^#[0-9a-f]{6}$/i.test(v);
+        else ok = typeof v === 'string';
+        if (!ok) { skipped.push(k); return; }
+        setVal(el, v);
+        this.overrides.delete(k);
+        applied++;
+      });
+      if (!applied) throw new Error('적용할 설정 값이 없음');
+      return { applied, skipped };
     }
 
     /** 컨트롤 값 → 렌더링 파라미터 P. bypass는 표시 모드에 따라 ConnPanel이 채운다 */

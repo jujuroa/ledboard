@@ -346,8 +346,8 @@
     a.click();
   });
 
-  $('btn-reset').addEventListener('click', () => {
-    settings.restoreDefaults();
+  /** 컨트롤 값을 한꺼번에 바꾼 뒤(초기화·불러오기) 화면 전체에 반영하고 저장한다. */
+  function applyAllControls() {
     document.querySelectorAll('.slider input').forEach(showOutput);
     P = settings.read();
     sprite.update({ spread: P.spread, core: P.core, halo: P.halo, haloWidth: P.haloWidth, shape: P.shape });
@@ -357,6 +357,35 @@
     needLayout = true;
     channel.boardChanged();
     onChange({ target: {} });
+  }
+
+  $('btn-reset').addEventListener('click', () => {
+    settings.restoreDefaults();
+    applyAllControls();
+  });
+
+  $('btn-export').addEventListener('click', () => {
+    const json = JSON.stringify(settings.exportData(), null, 2);
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.download = `ledboard-settings_${P.cols}x${P.rows}.json`;
+    a.href = url;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  $('btn-import').addEventListener('click', () => $('settings-file').click());
+  $('settings-file').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';   // 같은 파일을 다시 골라도 change가 나도록
+    if (!file) return;
+    try {
+      const { skipped } = settings.importData(JSON.parse(await file.text()));
+      applyAllControls();
+      alertStat(`설정 불러옴: ${file.name}` + (skipped.length ? ` (건너뜀: ${skipped.join(', ')})` : ''));
+    } catch (err) {
+      alertStat('설정 불러오기 실패: ' + (err instanceof SyntaxError ? 'JSON 형식 오류' : err.message));
+    }
   });
 
   function togglePanel() {
