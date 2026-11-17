@@ -106,6 +106,7 @@
 
     constructor(canvas) {
       this.name = 'WebGL2';
+      this.needsBrightness = false;   // rgba·luma8은 셰이더에서 톤 처리 (frame.js 참고)
       this.canvas = canvas;
       const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, preserveDrawingBuffer: false });
       if (!gl) throw new Error('WebGL2 미지원');
@@ -151,7 +152,7 @@
       return t;
     }
 
-    render(src, layout, sprite, p) {
+    render(frame, layout, sprite, p) {
       const gl = this.gl;
       if (sprite.version !== this._spriteVersion) {
         gl.bindTexture(gl.TEXTURE_2D, this.glowTex);
@@ -161,21 +162,21 @@
         this._spriteVersion = sprite.version;
       }
       gl.activeTexture(gl.TEXTURE0);
-      const bright = !!src.bright;          // {bright: Float32Array, cols, rows} = 이징 결과
-      const led = !bright && !!src.led;     // {led: Uint8Array, cols, rows} = LED 직접 입력
+      const bright = frame.kind === 'bright';   // 최종 밝기 (CPU 파이프라인 결과)
+      const led = frame.kind === 'luma8';       // LED 직접 입력
       if (bright) {
         gl.bindTexture(gl.TEXTURE_2D, this.brightTex);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, src.cols, src.rows, 0, gl.RED, gl.FLOAT, src.bright);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, frame.cols, frame.rows, 0, gl.RED, gl.FLOAT, frame.data);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
       } else if (led) {
         gl.bindTexture(gl.TEXTURE_2D, this.ledTex);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, src.cols, src.rows, 0, gl.RED, gl.UNSIGNED_BYTE, src.led);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, frame.cols, frame.rows, 0, gl.RED, gl.UNSIGNED_BYTE, frame.data);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
       } else {
         gl.bindTexture(gl.TEXTURE_2D, this.srcTex);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, src);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, frame.data);
       }
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, this.glowTex);

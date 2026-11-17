@@ -3,7 +3,9 @@
  * 아이디어를 가장 직접적으로 구현한 렌더러.
  * 소자마다 같은 글로우 이미지를 globalAlpha = 밝기로 drawImage('lighter' 합성) 한다.
  * WebGL2가 없을 때의 fallback이자, GL 결과와 비교하는 기준용이다.
- * (노출 압축은 픽셀 단위 비선형이라 이 렌더러에서는 적용되지 않음)
+ *
+ * 입력은 최종 밝기(LedFrame bright)만 받는다. 톤 처리는 BrightnessPipeline이 LedTone으로 미리 한다
+ * (needsBrightness = true). 노출 압축은 픽셀 단위 비선형이라 이 렌더러에서는 적용되지 않는다.
  */
 (function (global) {
   'use strict';
@@ -15,6 +17,7 @@
   class Canvas2DRenderer {
     constructor(canvas) {
       this.name = 'Canvas2D';
+      this.needsBrightness = true;   // 톤 처리된 bright 프레임만 받음
       this.canvas = canvas;
       this.ctx = canvas.getContext('2d', { alpha: false });
       this._bg = document.createElement('canvas');
@@ -53,19 +56,17 @@
       return c;
     }
 
-    render(src, layout, sprite, p) {
+    render(frame, layout, sprite, p) {
       const ctx = this.ctx;
       const { cols, rows, pitch, originX, originY } = layout;
       ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = 1;
       ctx.drawImage(this._background(layout, sprite, p), 0, 0);
 
-      // 입력 3종: 최종 밝기(이징 결과) / LED 직접 입력 버퍼 / 캔버스 픽셀
-      const sized = src.cols === cols && src.rows === rows;
-      const bright = src.bright && sized ? src.bright : null;
-      const led = !bright && src.led && sized ? src.led : null;
-      const data = bright || led ? null : src.getContext('2d').getImageData(0, 0, cols, rows).data;
-      const lut = bright ? null : led && p.bypass ? LedTone.BYPASS : LedTone.makeLut(p);
+      if (frame.kind !== 'bright' || frame.cols !== cols || frame.rows !== rows) {
+        throw new Error(`Canvas2DRenderer: ${cols}×${rows} bright 프레임 필요 (${frame.kind} ${frame.cols}×${frame.rows})`);
+      }
+      const bright = frame.data;
       const glow = sprite.tinted(p.color);
       const R = sprite.spread * pitch;
       const D = R * 2;
@@ -74,19 +75,7 @@
       for (let y = 0; y < rows; y++) {
         const cy = originY + (y + 0.5) * pitch - R;
         for (let x = 0; x < cols; x++) {
-          let b;
-          if (bright) {
-            b = bright[y * cols + x] * p.intensity;
-          } else {
-            let luma;
-            if (led) {
-              luma = led[y * cols + x];
-            } else {
-              const i = (y * cols + x) * 4;
-              luma = Math.round(0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]);
-            }
-            b = lut[luma] * p.intensity;
-          }
+          const b = bright[y * cols + x] * p.intensity;
           if (b <= 0.002) continue;
           // intensity > 1 이면 같은 이미지를 한 번 더 얹어 표현
           let a = b;

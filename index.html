@@ -235,14 +235,20 @@
     </section>
   </aside>
 
+  <!-- 빌드 없이 file://로도 열리도록 ES module 대신 전역 스크립트. 의존하는 것을 먼저 로드 -->
+  <script src="js/frame.js"></script>
   <script src="js/glow-sprite.js"></script>
   <script src="js/tone.js"></script>
   <script src="js/led-dynamics.js"></script>
   <script src="js/idle-dimmer.js"></script>
+  <script src="js/pipeline.js"></script>
   <script src="js/source.js"></script>
   <script src="js/renderer-gl.js"></script>
   <script src="js/renderer-2d.js"></script>
   <script src="js/ws-channel.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/previews.js"></script>
+  <script src="js/conn-panel.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

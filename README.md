@@ -85,16 +85,21 @@ http://localhost:8000/index.html?ws=ws://127.0.0.1:8765/&panel=0
 LEDBoard/
 ├── index.html            UI 마크업
 ├── css/style.css         스타일
-├── js/
+├── js/                   빌드 없이 file://로 열리도록 전역 스크립트. index.html이 의존 순서대로 로드
+│   ├── frame.js          렌더러 입력 프레임 형식 rgba·luma8·bright (LedFrame)
 │   ├── glow-sprite.js    단일 글로우 이미지 생성 (GlowSprite)
 │   ├── tone.js           휘도 → 밝기 변환 LUT (LedTone)
 │   ├── led-dynamics.js   소자 밝기 이징, 가속도 모델 (BrightnessDynamics)
 │   ├── idle-dimmer.js    정지 소자 감광 (IdleDimmer)
+│   ├── pipeline.js       CPU 밝기 파이프라인: 톤 → 감광 → 이징 (BrightnessPipeline)
 │   ├── source.js         입력을 LED 해상도로 샘플링 (FrameSource)
 │   ├── renderer-gl.js    WebGL2 인스턴싱 렌더러 (GLRenderer)
 │   ├── renderer-2d.js    Canvas2D 렌더러 (Canvas2DRenderer)
 │   ├── ws-channel.js     WebSocket 외부 입력 수신 (WsChannel)
-│   └── main.js           UI 바인딩, 레이아웃, 렌더 루프, 스트림 연결
+│   ├── settings.js       설정 읽기·저장·복원, 쿼리 파라미터 (Settings)
+│   ├── previews.js       패널의 글로우·이징·감광 미리보기 (LedPreviews)
+│   ├── conn-panel.js     연결 패널, 상태 표시, 표시 모드 UI (ConnPanel)
+│   └── main.js           모듈 조립, UI 바인딩, 레이아웃, 렌더 루프
 ├── tools/
 │   ├── requirements.txt  발신 도구 Python 의존성
 │   ├── ledboard_proto.py ledboard.v1 발신 측 공통 모듈 (헤더, 메시지, LED 비트 패킹)

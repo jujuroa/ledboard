@@ -113,41 +113,59 @@ package "입력" {
   [이미지 / 영상 파일] as File
   [카메라] as Cam
   [텍스트 · 내장 패턴] as Gen
+  [외부 프로그램\n(WebSocket)] as Ext
 }
 
-component "FrameSource\n(js/source.js)" as Src
-component "GlowSprite\n(js/glow-sprite.js)" as Sprite
-component "main\n(js/main.js)\nUI · 레이아웃 · 렌더 루프" as Main
+component "FrameSource\n(source.js)" as Src
+component "WsChannel\n(ws-channel.js)" as Ch
+component "ConnPanel\n(conn-panel.js)\n연결 패널 · 표시 모드 UI" as Conn
+component "Settings\n(settings.js)" as Set
+component "main\n(main.js)\n조립 · 레이아웃 · 렌더 루프" as Main
+component "BrightnessPipeline\n(pipeline.js)\nLedTone → IdleDimmer\n→ BrightnessDynamics" as Pipe
+component "GlowSprite\n(glow-sprite.js)" as Sprite
 
 package "렌더러 (둘 중 하나 선택)" as R {
-  component "GLRenderer\n(js/renderer-gl.js)\nWebGL2 인스턴싱" as GL
-  component "Canvas2DRenderer\n(js/renderer-2d.js)\n소자별 drawImage" as C2D
+  component "GLRenderer\n(renderer-gl.js)\nWebGL2 인스턴싱" as GL
+  component "Canvas2DRenderer\n(renderer-2d.js)\n소자별 drawImage" as C2D
 }
 
 File --> Src
 Cam --> Src
 Gen --> Src
-Main -left-> Src : resize / draw
-Main --> Sprite : update(파라미터)
-Main --> R : render(src, layout,\nsprite, params)
-Src --> R : cols×rows 캔버스
+Ext --> Ch
+Ch --> Src : IMAGE · RAW\n(그림 모드)
+Ch ..> Conn : 상태 · 통계
+Set --> Main : 파라미터 P
+Main --> Src : draw → rgba 프레임
+Main --> Ch : front → luma8 프레임\n(LED 직접 입력)
+Main --> Pipe : process(frame)
+Pipe --> R : rgba · luma8 · bright 프레임
 Sprite --> R : 글로우 이미지
 @enduml
 ```
 
 | 모듈 | 책임 | 주요 인터페이스 |
 |---|---|---|
+| `LedFrame` | 소스 → 파이프라인 → 렌더러로 넘기는 프레임 형식 정의 (`rgba`, `luma8`, `bright`) | `rgba(canvas)`, `luma8()`, `bright()` |
 | `GlowSprite` | 단일 글로우 이미지 생성. 파라미터가 바뀌면 다시 그리고 `version` 증가 | `update(opt)`, `canvas`, `version`, `tinted(rgb)` |
-| `FrameSource` | 입력을 `cols × rows` 캔버스로 샘플링. 맞춤 방식 처리 | `resize()`, `draw(now)`, `loadFile()`, `useCamera()`, `usePattern()`, `useText()`, `animated` |
-| `GLRenderer` | WebGL2 인스턴싱 렌더링. 톤 처리와 글로우 합성을 셰이더에서 수행 | `render(src, layout, sprite, params)` |
-| `Canvas2DRenderer` | 같은 결과를 Canvas2D로 그림. 톤 처리는 256단계 LUT | `render(src, layout, sprite, params)` |
-| `LedTone` | 휘도 → 밝기 b 변환 LUT (GL `tone()`과 같은 계산). 소스에서 소자별 목표 밝기 계산 | `makeLut(params)`, `BYPASS`, `computeTargets()` |
+| `FrameSource` | 입력을 `cols × rows` 캔버스로 샘플링. 맞춤 방식 처리 | `resize()`, `draw(now)`, `loadFile()`, `useCamera()`, `usePattern()`, `useText()`, `useStream()`, `animated` |
+| `LedTone` | 휘도 → 밝기 b 변환 LUT (GL `tone()`과 같은 계산). 프레임에서 소자별 목표 밝기 계산. CPU 톤 처리의 유일한 구현 | `makeLut(params)`, `computeTargets()` |
 | `IdleDimmer` | 정지 소자 감광. 변화 없는 소자의 밝기를 시간에 따라 최저 밝기로 내림 | `update(base, now, params)`, `active`, `dimmed`, `time95()` |
 | `BrightnessDynamics` | 소자 밝기 이징(가속도 모델). 목표 밝기를 받아 프레임마다 정확한 해로 적분 | `setTargetArray()`, `step(dt, f, ζ)`, `display`, `active`, `stepResponse()` |
-| `WsChannel` | 외부 WebSocket 입력 수신(ledboard.v1). IMAGE·RAW는 `FrameSource`로, LED 직접 입력은 렌더러로 전달. 재연결, 통계, 오류 회신 | `connect()`, `disconnect()`, `boardChanged()`, `setLedTone()`, `mode`, `front` |
-| `main` | UI 바인딩, 설정 저장, 레이아웃 계산, 렌더 루프, 통계 표시, 스트림 연결 UI | — |
+| `BrightnessPipeline` | CPU 밝기 경로 결정과 실행. 톤 처리 → 감광 → 이징을 거쳐 `bright` 프레임 생성. 필요 없으면 입력 프레임을 그대로 통과 | `prepare(params, forceCpu)`, `process(frame, …)`, `moving(params)` |
+| `GLRenderer` | WebGL2 인스턴싱 렌더링. 세 프레임 형식 모두 처리. `rgba`·`luma8`는 셰이더에서 톤 처리 | `render(frame, layout, sprite, params)`, `needsBrightness = false` |
+| `Canvas2DRenderer` | 같은 결과를 Canvas2D로 그림. `bright` 프레임만 받음 | `render(frame, layout, sprite, params)`, `needsBrightness = true` |
+| `WsChannel` | 외부 WebSocket 입력 수신(ledboard.v1). IMAGE·RAW는 `FrameSource`로, LED 직접 입력은 `front` 버퍼로 전달. 재연결, 통계, 오류 회신 | `connect()`, `disconnect()`, `boardChanged()`, `setLedTone()`, `mode`, `front` |
+| `ConnPanel` | 연결 패널(URL·토큰·연결·LED 톤), 상태 문구·배지, 표시 모드에 따른 컨트롤 비활성화 | `bind()`, `connect()`, `update()`, `applyMode()`, `directMode` |
+| `Settings` | 패널 컨트롤 값 읽기·저장·복원. 쿼리 파라미터 덮어쓰기 관리 | `load()`, `save()`, `read()`, `release(id)`, `restoreDefaults()` |
+| `LedPreviews` | 설정 패널의 글로우·이징·감광 미리보기 | `drawAll(sprite, params)` |
+| `main` | 모듈 조립, 컨트롤 이벤트 바인딩, 레이아웃 계산, 렌더 루프, 상태 표시줄, 단축키 | — |
 
-두 렌더러는 같은 `render(src, layout, sprite, params)` 시그니처를 가진다. 렌더러마다 캔버스를 따로 두는데, 한 캔버스에서 WebGL과 2D 컨텍스트를 바꿔 가며 쓸 수 없기 때문이다. 렌더러는 처음 선택될 때 생성된다.
+설정 키는 패널 컨트롤의 id와 같다. 값의 원본은 DOM이고, `Settings.read()`가 렌더링에 쓰는 파라미터 `P`를 만든다.
+
+두 렌더러는 같은 `render(frame, layout, sprite, params)` 시그니처를 가진다. 렌더러마다 캔버스를 따로 두는데, 한 캔버스에서 WebGL과 2D 컨텍스트를 바꿔 가며 쓸 수 없기 때문이다. 렌더러는 처음 선택될 때 생성된다.
+
+스크립트는 ES module이 아닌 전역 스크립트(IIFE)로 두고 `index.html`에서 의존 순서대로 불러온다. ES module은 `file://`로 연 페이지에서 CORS로 막혀, 빌드·서버 없이 `index.html`을 바로 여는 사용 방식을 지킬 수 없기 때문이다.
 
 ## 5. 프레임 처리 흐름
 
@@ -162,6 +180,7 @@ skinparam roundCorner 8
 participant "requestAnimationFrame" as RAF
 participant "main" as M
 participant "FrameSource" as S
+participant "BrightnessPipeline" as BP
 participant "GLRenderer" as R
 participant "GPU" as G
 
@@ -171,9 +190,12 @@ alt dirty 또는 소스가 애니메이션
     M -> M : computeLayout()\n피치·캔버스 크기 계산
     M -> S : resize(cols, rows)
   end
+  M -> BP : prepare(P, renderer.needsBrightness)
   M -> S : draw(now)
-  S --> M : cols×rows 캔버스
-  M -> R : render(src, layout, sprite, P)
+  S --> M : cols×rows 캔버스 (rgba 프레임)
+  M -> BP : process(frame)
+  BP --> M : 그대로 (GL, 이징·감광 꺼짐)\n또는 bright 프레임
+  M -> R : render(frame, layout, sprite, P)
   opt sprite.version 변경
     R -> G : 글로우 텍스처 업로드 + mipmap
   end
@@ -186,13 +208,17 @@ M -> M : 0.5초마다 fps · 렌더 시간 표시
 
 정지 이미지는 `animated = false`라 설정이 바뀔 때(`dirty`)만 다시 그린다. 패턴, 텍스트, 영상, 카메라는 매 프레임 그린다.
 
+LED 직접 입력으로 표시 중이면 `FrameSource` 대신 `WsChannel.front` 버퍼를 `luma8` 프레임으로 쓴다.
+
+`BrightnessPipeline`은 밝기 이징이나 정지 소자 감광이 켜져 있거나, 렌더러가 `bright` 프레임만 받을 때(Canvas2D) CPU에서 톤 처리를 하고 `bright` 프레임을 만든다. 그 밖에는 입력 프레임을 그대로 넘기고 GL 셰이더가 톤 처리를 한다.
+
 밝기 이징이나 정지 소자 감광이 켜져 있으면 프레임 처리가 둘로 나뉜다. 소스가 바뀐 프레임은 소스를 다시 그리고 목표 밝기를 갱신한 뒤 감광·이징을 진행한다. 소스는 그대로지만 밝기가 아직 움직이거나 감광이 진행 중인 프레임은 소스를 건너뛰고 감광·이징만 진행해 그린다(7.1절, 7.2절).
 
 ## 6. 입력 샘플링 (FrameSource)
 
 - 내부 캔버스 크기가 곧 LED 해상도다. 픽셀 1개가 LED 1개에 대응한다.
 - `drawImage`로 축소하며 `imageSmoothingQuality = 'high'`를 준다. 축소 필터 품질은 브라우저 구현에 따른다(10절).
-- 캔버스는 `willReadFrequently: true`로 만든다. Canvas2D 렌더러가 매 프레임 `getImageData`를 호출하기 때문이다.
+- 캔버스는 `willReadFrequently: true`로 만든다. CPU 밝기 경로(Canvas2D 렌더러, 이징, 감광)에서 `LedTone.computeTargets()`가 매 프레임 `getImageData`를 호출하기 때문이다.
 
 | 입력 | 처리 |
 |---|---|
@@ -208,7 +234,7 @@ M -> M : 0.5초마다 fps · 렌더 시간 표시
 
 ## 7. 톤 파이프라인
 
-원본 픽셀에서 LED 밝기 b를 구하는 과정이다. GL은 버텍스 셰이더의 `tone()`, Canvas2D와 밝기 이징은 `LedTone.makeLut()`(js/tone.js)의 256단계 LUT가 같은 계산을 한다.
+원본 픽셀에서 LED 밝기 b를 구하는 과정이다. GL은 버텍스 셰이더의 `tone()`이, CPU 경로(Canvas2D, 밝기 이징, 감광)는 `BrightnessPipeline`을 거쳐 `LedTone`(js/tone.js)의 256단계 LUT가 같은 계산을 한다. CPU 쪽 구현은 `LedTone` 하나뿐이다.
 
 ```mermaid
 %%{init: {'htmlLabels': false, 'flowchart': {'wrappingWidth': 500, 'htmlLabels': false}}}%%
@@ -296,7 +322,7 @@ M은 ζ에 따라 부족·임계·과감쇠의 닫힌 해로 프레임마다 한
 - 다시 변하면 g는 즉시 1로 돌아간다. 밝기 이징이 켜져 있으면 감광 결과가 이징의 목표가 되므로, 복귀와 감광 모두 가속도 모델로 부드럽게 움직인다.
 - 유지 중이거나 감광이 진행 중인 켜진 소자가 있으면 렌더 루프가 계속 돈다. 모두 최저에 닿으면 다시 쉰다.
 
-처리 순서는 `톤 처리 → 감광 → 이징 → 렌더러`다. 이징이나 감광 중 하나라도 켜지면 CPU 밝기 경로(7.1절의 R32F 업로드)를 쓴다.
+처리 순서는 `톤 처리 → 감광 → 이징 → 렌더러`이고 `BrightnessPipeline`(js/pipeline.js)이 이 순서로 호출한다. 이징이나 감광 중 하나라도 켜지면 CPU 밝기 경로(7.1절의 R32F 업로드)를 쓴다.
 
 **검증.** 단위 시험에서 감광 값이 식과 일치했다(t = 5초에 0.3449). 0.03 노이즈는 무시했고 누적 0.07·큰 변화는 리셋했다. 정지 이미지(유지 1초, τ 1초, 최저 0.1)에서 화면 밝기가 1.45초 0.676, 2.04초 0.416, 2.94초 0.229, 4.43초 0.129로 이론값(0.674, 0.418, 0.229, 0.129)과 맞았다. 모두 최저에 닿은 뒤 렌더 루프가 멈췄고, 변화를 주자 0.7초 안에 원래 밝기로 복귀했다. 변화량이 기준값과 정확히 같을 때는 float 반올림 때문에 변화로 잡힐 수 있다.
 
@@ -316,7 +342,7 @@ M은 ζ에 따라 부족·임계·과감쇠의 닫힌 해로 프레임마다 한
 |---|---|---|---|
 | 소스 | RGBA8, `cols × rows` | NEAREST | 매 프레임 `texImage2D(canvas)` |
 | LED 직접 입력 | R8, `cols × rows` | NEAREST | WebSocket LED 프레임 표시 시 |
-| 최종 밝기 | R32F, `cols × rows` | NEAREST (float는 필터링 불가) | 밝기 이징 사용 시 매 프레임. 셰이더가 톤 처리를 건너뜀 |
+| 최종 밝기 | R32F, `cols × rows` | NEAREST (float는 필터링 불가) | 밝기 이징·감광 사용 시 매 프레임. 셰이더가 톤 처리를 건너뜀 |
 | 글로우 | RGBA8, 256 × 256 | LINEAR_MIPMAP_LINEAR | `sprite.version`이 바뀔 때만 |
 
 글로우 텍스처에 mipmap을 쓰는 이유는 피치가 작을 때(스프라이트가 수십 px로 축소될 때) aliasing을 막기 위해서다.
@@ -344,7 +370,7 @@ col = ledColor * a * intensity + offColor * glow.g * (1 - b)
 아이디어를 가장 직접 옮긴 구현이다.
 
 1. 배경과 꺼진 소자 점을 별도 캔버스에 한 번 그려 캐시한다. 레이아웃, 스프라이트, 색이 바뀔 때만 다시 그린다.
-2. 소스 캔버스를 `getImageData`로 읽고 256단계 LUT로 밝기 b를 구한다.
+2. `bright` 프레임(최종 밝기 b)을 받는다. 톤 처리는 `BrightnessPipeline`이 `LedTone`으로 미리 한다(`needsBrightness = true`).
 3. `globalCompositeOperation = 'lighter'`에서 켜진 소자마다 `globalAlpha = b`로 tinted 스프라이트를 `drawImage`한다.
 
 tinted 스프라이트는 RGB를 LED 색으로 채우고 알파 채널에 글로우 프로파일(R 채널)을 넣은 이미지다. 색이나 스프라이트가 바뀔 때만 다시 만든다.
